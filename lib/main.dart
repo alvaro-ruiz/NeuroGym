@@ -4,17 +4,7 @@ import 'screen/login.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SupabaseConfig.init();
-
-  // Prueba de conexión
-  try {
-    final users =
-        await SupabaseConfig.client.from('usuarios').select().limit(1);
-    print('✅ Conexión OK: $users');
-  } catch (e) {
-    print('❌ Error de conexión: $e');
-  }
-
+  await SupabaseConfig.init(); // 🔗 conexión Supabase
   runApp(const MyApp());
 }
 

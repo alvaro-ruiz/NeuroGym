@@ -67,6 +67,7 @@ class _NeuroGymRegisterPageState extends State<NeuroGymRegisterPage> {
         data: {
           'full_name': name,
         },
+        emailRedirectTo: null, // No redirigir al confirmar email
       );
 
       // 📋 Imprime los datos traídos de la BD en consola
@@ -76,15 +77,19 @@ class _NeuroGymRegisterPageState extends State<NeuroGymRegisterPage> {
       print('Nombre: ${response.user?.userMetadata?['full_name']}');
       print('Respuesta completa: $response');
 
-      // Guardar datos adicionales en la tabla 'usuarios' (opcional)
+      // Guardar datos adicionales en la tabla 'users_profiles'
       if (response.user != null) {
-        await SupabaseConfig.client.from('usuarios').insert({
-          'id': response.user!.id,
-          'email': email,
-          'full_name': name,
-          'created_at': DateTime.now().toIso8601String(),
-        });
-        print('✅ Usuario guardado en tabla usuarios');
+        try {
+          await SupabaseConfig.client.from('users_profiles').insert({
+            'auth_user_id': response.user!.id,
+            'display_name': name,
+            'created_at': DateTime.now().toIso8601String(),
+          });
+          print('✅ Perfil de usuario creado en users_profiles');
+        } catch (e) {
+          print('⚠️ No se pudo crear perfil: $e');
+          // Continúa sin error, el usuario ya está creado en Authentication
+        }
       }
 
       // Si el registro es exitoso
