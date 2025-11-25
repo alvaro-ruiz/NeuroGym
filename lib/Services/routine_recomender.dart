@@ -10,7 +10,7 @@ class RoutineRecommenderService {
   static const String _apiUrl =
       'https://api-inference.huggingface.co/pipeline/feature-extraction/$_modelId';
 
-  /// Prueba la conexión con Hugging Face (útil para diagnosticar)
+  /// Prueba la conexión con Hugging Face (útil para diagnosticar) lkpofk
   static Future<bool> testConnection() async {
     try {
       print('🧪 Probando conexión con Hugging Face...');
