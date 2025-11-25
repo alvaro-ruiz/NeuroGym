@@ -5,7 +5,7 @@ import 'package:neuro_gym/bd/supabase_config.dart';
 
 class RoutineRecommenderService {
   // API Key de Hugging Face
-  static const String _apiKey = '';
+  static const Null _apiKey = null;
   static const String _modelId = 'sentence-transformers/all-MiniLM-L6-v2';
   static const String _apiUrl =
       'https://api-inference.huggingface.co/pipeline/feature-extraction/$_modelId';
