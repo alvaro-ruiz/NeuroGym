@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:neuro_gym/bd/supabase_config.dart';
+import 'package:neuro_gym/screen/add_exercises.dart';
 
 class RoutineDetailPage extends StatefulWidget {
   final String routineId;
@@ -155,7 +156,8 @@ class _RoutineDetailPageState extends State<RoutineDetailPage> {
                       backgroundColor: Colors.black,
                       child: GridView.builder(
                         padding: const EdgeInsets.all(20),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           crossAxisSpacing: 15,
                           mainAxisSpacing: 15,
@@ -173,9 +175,9 @@ class _RoutineDetailPageState extends State<RoutineDetailPage> {
 
   Widget _buildDayCard(Map<String, dynamic> day) {
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         print('📅 Día seleccionado: ${day['id']}');
-        Navigator.push(
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => DayExercisesPage(
@@ -184,6 +186,11 @@ class _RoutineDetailPageState extends State<RoutineDetailPage> {
             ),
           ),
         );
+
+        // Si se agregaron ejercicios, puedes recargar aquí si es necesario
+        if (result == true) {
+          _loadRoutineDays();
+        }
       },
       child: Container(
         decoration: BoxDecoration(
@@ -386,6 +393,32 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
           ),
         ),
         centerTitle: true,
+        // 🆕 BOTÓN AGREGAR EJERCICIOS
+        actions: [
+          IconButton(
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AddExercisesToDayPage(
+                    dayId: widget.dayId,
+                    dayTitle: widget.dayTitle,
+                  ),
+                ),
+              );
+
+              if (result == true) {
+                _loadExercises(); // Recargar lista de ejercicios
+              }
+            },
+            icon: const Icon(
+              Icons.add_circle_outline,
+              color: Colors.orangeAccent,
+              size: 28,
+            ),
+            tooltip: 'Agregar ejercicios',
+          ),
+        ],
       ),
       body: _isLoading
           ? Center(
@@ -426,6 +459,30 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
                                 style: GoogleFonts.montserrat(
                                   color: Colors.orangeAccent.withOpacity(0.6),
                                   fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              TextButton.icon(
+                                onPressed: () async {
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          AddExercisesToDayPage(
+                                        dayId: widget.dayId,
+                                        dayTitle: widget.dayTitle,
+                                      ),
+                                    ),
+                                  );
+
+                                  if (result == true) {
+                                    _loadExercises();
+                                  }
+                                },
+                                icon: const Icon(Icons.add),
+                                label: const Text('Agregar ejercicios'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.orangeAccent,
                                 ),
                               ),
                             ],
@@ -587,7 +644,8 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
             ],
           ),
 
-          if (exercise['notes'] != null && exercise['notes'].toString().isNotEmpty) ...[
+          if (exercise['notes'] != null &&
+              exercise['notes'].toString().isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(
               exercise['notes'],

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:neuro_gym/bd/supabase_config.dart';
+import 'package:neuro_gym/screen/ia.dart';
 import 'package:neuro_gym/screen/routine_detail.dart';
-import 'package:neuro_gym/screen/create_rutine.dart';
+import 'package:neuro_gym/screen/creation_rutine.dart';
+import 'package:neuro_gym/screen/active_workout.dart'; //
 
 class NeuroGymRoutinesPage extends StatefulWidget {
   const NeuroGymRoutinesPage({super.key});
@@ -59,6 +61,95 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
         _errorMessage = 'Error al cargar rutinas: ${e.toString()}';
         _isLoading = false;
       });
+    }
+  }
+
+  // 🗑️ NUEVA FUNCIÓN: Borrar rutina
+  Future<void> _deleteRoutine(String routineId, String routineTitle) async {
+    // Mostrar diálogo de confirmación
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: Colors.orangeAccent.withOpacity(0.5),
+            width: 1,
+          ),
+        ),
+        title: Text(
+          '¿Eliminar rutina?',
+          style: GoogleFonts.montserrat(
+            color: Colors.orangeAccent,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          '¿Estás seguro de que quieres eliminar "$routineTitle"?\n\nEsta acción no se puede deshacer.',
+          style: GoogleFonts.montserrat(
+            color: Colors.white,
+            fontSize: 14,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'CANCELAR',
+              style: GoogleFonts.montserrat(
+                color: Colors.orangeAccent.withOpacity(0.6),
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(
+              'ELIMINAR',
+              style: GoogleFonts.montserrat(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      print('🗑️ Eliminando rutina: $routineId');
+
+      // Eliminar la rutina (cascade eliminará días y ejercicios automáticamente)
+      await SupabaseConfig.client.from('routines').delete().eq('id', routineId);
+
+      print('✅ Rutina eliminada exitosamente');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Rutina "$routineTitle" eliminada'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Recargar la lista
+        _loadRoutines();
+      }
+    } catch (e) {
+      print('❌ Error al eliminar rutina: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al eliminar: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -121,7 +212,7 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          CircularProgressIndicator(
+                          const CircularProgressIndicator(
                             color: Colors.orangeAccent,
                           ),
                           const SizedBox(height: 20),
@@ -142,7 +233,7 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.error_outline,
                                   color: Colors.red,
                                   size: 60,
@@ -161,7 +252,7 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
                                   onPressed: _loadRoutines,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.black,
-                                    side: BorderSide(
+                                    side: const BorderSide(
                                       color: Colors.orangeAccent,
                                       width: 2,
                                     ),
@@ -220,7 +311,7 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
                                           _loadRoutines();
                                         }
                                       },
-                                      icon: Icon(
+                                      icon: const Icon(
                                         Icons.add_circle_outline,
                                         color: Colors.orangeAccent,
                                         size: 32,
@@ -273,7 +364,7 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
                                         routine['id'],
                                       ),
                                     );
-                                  }).toList(),
+                                  }),
                               ],
                             ),
                           ),
@@ -306,6 +397,29 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
                 showSelectedLabels: false,
                 showUnselectedLabels: false,
                 onTap: (index) async {
+                  if (index == 1) {
+                    // Stats
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const WorkoutHistoryPage()),
+                    );
+                  }
+                  if (index == 2) {
+                    // Abrir generador de rutinas con IA (si prefieres en AppBar,
+                    // añade el IconButton en el Row superior en lugar de aquí)
+                    final result = await showModalBottomSheet<bool>(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (context) => const AIRoutineGeneratorDialog(),
+                    );
+                    if (result == true) {
+                      _loadRoutines(); // Recargar rutinas si el diálogo creó una
+                    }
+                    return;
+                  }
+
                   if (index == 3) {
                     // Botón de la pesa - Crear rutina
                     final result = await Navigator.push(
@@ -409,6 +523,16 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
                   ],
                 ],
               ),
+            ),
+            // 🗑️ NUEVO: Botón de eliminar
+            IconButton(
+              onPressed: () => _deleteRoutine(routineId, title),
+              icon: const Icon(
+                Icons.delete_outline,
+                color: Colors.red,
+                size: 24,
+              ),
+              tooltip: 'Eliminar rutina',
             ),
             Icon(
               Icons.arrow_forward_ios,
