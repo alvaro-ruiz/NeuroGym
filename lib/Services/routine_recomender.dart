@@ -1,14 +1,16 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:http/http.dart' as http;
+import 'package:neuro_gym/Services/huggingface_direct_service.dart';
 import 'package:neuro_gym/bd/supabase_config.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class RoutineRecommenderService {
   // API Key de Hugging Face
-  static const String _apiKey = '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';
+  static final _apiKey = dotenv.env['HUGGINGFACE_API_KEY'];
   static const String _modelId = 'sentence-transformers/all-MiniLM-L6-v2';
   static const String _apiUrl =
-      'https://api-inference.huggingface.co/pipeline/feature-extraction/$_modelId';
+      'https://router.huggingface.co/pipeline/feature-extraction/$_modelId';
 
   /// Prueba la conexión con Hugging Face (útil para diagnosticar)
   static Future<bool> testConnection() async {
@@ -251,85 +253,18 @@ class RoutineRecommenderService {
     return '$title $description';
   }
 
-  /// Genera embedding usando Hugging Face API (con reintentos y mejor manejo)
+  /// Genera embedding usando HuggingFace DIRECTAMENTE (sin backend)
   static Future<List<double>> _getEmbedding(String text) async {
-    const maxRetries = 3;
-    int attempt = 0;
+    // Importa el servicio directo al inicio del archivo:
+    // import 'package:neuro_gym/Services/huggingface_direct_service.dart';
 
-    while (attempt < maxRetries) {
-      try {
-        print('🔄 Intento ${attempt + 1}/$maxRetries de generar embedding...');
-
-        final response = await http
-            .post(
-          Uri.parse(_apiUrl),
-          headers: {
-            'Authorization': 'Bearer $_apiKey',
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode({
-            'inputs': text,
-            'options': {'wait_for_model': true}
-          }),
-        )
-            .timeout(
-          const Duration(seconds: 30),
-          onTimeout: () {
-            throw Exception('Timeout: La API tardó demasiado en responder');
-          },
-        );
-
-        print('📡 Status Code: ${response.statusCode}');
-
-        if (response.statusCode == 200) {
-          final dynamic result = jsonDecode(response.body);
-
-          List<double> embedding;
-          if (result is List && result.isNotEmpty) {
-            if (result[0] is List) {
-              embedding = List<double>.from(result[0].map((e) => e.toDouble()));
-            } else {
-              embedding = List<double>.from(result.map((e) => e.toDouble()));
-            }
-          } else {
-            throw Exception('Formato de respuesta inesperado: $result');
-          }
-
-          print('✅ Embedding generado (${embedding.length} dimensiones)');
-          return embedding;
-        } else if (response.statusCode == 503) {
-          print('⏳ Modelo cargándose (503), esperando 10 segundos...');
-          await Future.delayed(const Duration(seconds: 10));
-          attempt++;
-          continue;
-        } else if (response.statusCode == 401) {
-          throw Exception(
-              'API Key inválida. Verifica tu token en https://huggingface.co/settings/tokens');
-        } else {
-          throw Exception(
-            'Error ${response.statusCode}: ${response.body}',
-          );
-        }
-      } catch (e) {
-        attempt++;
-        print('❌ Error en intento $attempt: $e');
-
-        if (attempt >= maxRetries) {
-          throw Exception(
-              'No se pudo conectar a Hugging Face después de $maxRetries intentos.\n'
-              'Error: $e\n'
-              'Verifica:\n'
-              '1. Tu conexión a internet\n'
-              '2. Que la API key sea válida\n'
-              '3. Los permisos de internet en AndroidManifest.xml');
-        }
-
-        // Espera progresiva entre reintentos
-        await Future.delayed(Duration(seconds: attempt * 3));
-      }
+    try {
+      print('🔄 Usando llamada DIRECTA a HuggingFace');
+      return await HuggingFaceDirectService.getEmbedding(text);
+    } catch (e) {
+      print('❌ Error en llamada directa: $e');
+      rethrow;
     }
-
-    throw Exception('Error desconocido al generar embedding');
   }
 
   /// Obtiene rutinas con embeddings de Supabase

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:neuro_gym/services/routine_recomender.dart';
 import 'package:neuro_gym/bd/supabase_config.dart';
-import 'package:http/http.dart' as http;
 
 class AIRoutineGeneratorDialog extends StatefulWidget {
   const AIRoutineGeneratorDialog({super.key});
@@ -20,7 +19,7 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
   String _goal = '';
   int _experienceLevel = 2;
   int _daysPerWeek = 3;
-  List<String> _selectedMuscles = [];
+  final List<String> _selectedMuscles = [];
   String _routineName = '';
 
   final List<String> _muscleGroups = [
@@ -44,15 +43,8 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
   Future<bool> _checkInternetConnection() async {
     try {
       print('🌐 Verificando conexión a internet...');
-      final response = await http
-          .get(Uri.parse('https://www.google.com'))
-          .timeout(const Duration(seconds: 5));
-
-      if (response.statusCode == 200) {
-        print('✅ Conexión a internet OK');
-        return true;
-      }
-      return false;
+      // Simplemente intentamos hacer la petición directamente
+      return true; // Asumimos que hay internet
     } catch (e) {
       print('❌ Sin conexión a internet: $e');
       return false;

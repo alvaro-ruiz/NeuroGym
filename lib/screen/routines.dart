@@ -4,7 +4,7 @@ import 'package:neuro_gym/bd/supabase_config.dart';
 import 'package:neuro_gym/screen/ia.dart';
 import 'package:neuro_gym/screen/routine_detail.dart';
 import 'package:neuro_gym/screen/creation_rutine.dart';
-import 'package:neuro_gym/screen/active_workout.dart'; //
+import 'package:neuro_gym/screen/workout_history.dart';
 
 class NeuroGymRoutinesPage extends StatefulWidget {
   const NeuroGymRoutinesPage({super.key});
@@ -400,11 +400,18 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
                   if (index == 1) {
                     // Stats
                     Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const WorkoutHistoryPage()),
-                    );
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const StatsPage()));
                   }
+                  /*if (index == 2) {
+                    // TEST HUGGINGFACE - NUEVO
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const MyApp()),
+                    );
+                    return;
+                  }*/
                   if (index == 2) {
                     // Abrir generador de rutinas con IA (si prefieres en AppBar,
                     // añade el IconButton en el Row superior en lugar de aquí)
@@ -418,6 +425,19 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
                       _loadRoutines(); // Recargar rutinas si el diálogo creó una
                     }
                     return;
+                  }
+
+                  if (index == 3) {
+                    // Botón de la pesa - Crear rutina
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CreateRoutinePage(),
+                      ),
+                    );
+                    if (result == true) {
+                      _loadRoutines();
+                    }
                   }
 
                   if (index == 3) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:neuro_gym/bd/supabase_config.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screen/login.dart';
 
 void main() async {
