@@ -404,14 +404,6 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
                         MaterialPageRoute(
                             builder: (context) => const StatsPage()));
                   }
-                  /*if (index == 2) {
-                    // TEST HUGGINGFACE - NUEVO
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const MyApp()),
-                    );
-                    return;
-                  }*/
                   if (index == 2) {
                     // Abrir generador de rutinas con IA (si prefieres en AppBar,
                     // añade el IconButton en el Row superior en lugar de aquí)

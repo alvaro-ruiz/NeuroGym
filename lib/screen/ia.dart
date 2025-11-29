@@ -52,12 +52,12 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
   }
 
   /// Verifica la conexión con Hugging Face
-  Future<bool> _checkHuggingFaceConnection() async {
+  Future<bool> _checkIAConnection() async {
     try {
-      print('🤖 Verificando conexión con Hugging Face...');
+      print('🤖 Verificando conexión...');
       return await RoutineRecommenderService.testConnection();
     } catch (e) {
-      print('❌ Error al conectar con Hugging Face: $e');
+      print('❌ Error al conectar: $e');
       return false;
     }
   }
@@ -76,7 +76,7 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
       }
 
       // 2. Verificar conexión con Hugging Face
-      final hasHuggingFace = await _checkHuggingFaceConnection();
+      final hasHuggingFace = await _checkIAConnection();
       if (!hasHuggingFace) {
         throw Exception('No se puede conectar con el servidor de IA.\n'
             'Verifica que tu API key sea válida o intenta más tarde.');

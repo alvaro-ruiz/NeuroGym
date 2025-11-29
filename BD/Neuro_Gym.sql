@@ -43,6 +43,7 @@ CREATE TABLE public.routines (
   owner_user_id uuid,
   is_public boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
+  embedding jsonb,
   CONSTRAINT routines_pkey PRIMARY KEY (id),
   CONSTRAINT routines_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users_profiles(auth_user_id)
 );
