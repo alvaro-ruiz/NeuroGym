@@ -14,7 +14,7 @@ class _RecommendationsPageState extends State<RecommendationsPage> {
   final TextEditingController _goalController = TextEditingController();
   int _experienceLevel = 2; // 1=principiante, 2=intermedio, 3=avanzado
   int _daysPerWeek = 3;
-  List<String> _selectedMuscles = [];
+  final List<String> _selectedMuscles = [];
 
   List<Map<String, dynamic>> _recommendations = [];
   bool _isLoading = false;
@@ -392,7 +392,7 @@ class _RecommendationsPageState extends State<RecommendationsPage> {
                   else
                     ..._recommendations.map((routine) {
                       return _buildRoutineCard(routine);
-                    }).toList(),
+                    }),
                 ],
               ),
             ),

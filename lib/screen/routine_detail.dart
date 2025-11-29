@@ -573,7 +573,7 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
               Container(
                 width: 35,
                 height: 35,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.orangeAccent,
                   shape: BoxShape.circle,
                 ),

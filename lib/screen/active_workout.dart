@@ -275,7 +275,7 @@ class _WorkoutHistoryPageState extends State<WorkoutHistoryPage> {
                         else
                           ..._workoutHistory.map((workout) {
                             return _buildWorkoutCard(workout);
-                          }).toList(),
+                          }),
                       ],
                     ),
                   ),

@@ -329,7 +329,7 @@ class _WorkoutHistoryTabState extends State<WorkoutHistoryTab>
                       else
                         ..._workoutHistory.map((workout) {
                           return _buildWorkoutCard(workout);
-                        }).toList(),
+                        }),
                     ],
                   ),
                 ),

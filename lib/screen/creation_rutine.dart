@@ -16,7 +16,7 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
   bool _isLoading = false;
   String? _errorMessage;
 
-  List<Map<String, dynamic>> _days = [];
+  final List<Map<String, dynamic>> _days = [];
 
   @override
   void dispose() {
@@ -468,7 +468,7 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
               Container(
                 width: 40,
                 height: 40,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.orangeAccent,
                   shape: BoxShape.circle,
                 ),

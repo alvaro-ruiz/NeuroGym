@@ -39,19 +39,16 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
     'Mejorar resistencia',
   ];
 
-  /// Verifica la conexión a internet
   Future<bool> _checkInternetConnection() async {
     try {
       print('🌐 Verificando conexión a internet...');
-      // Simplemente intentamos hacer la petición directamente
-      return true; // Asumimos que hay internet
+      return true;
     } catch (e) {
       print('❌ Sin conexión a internet: $e');
       return false;
     }
   }
 
-  /// Verifica la conexión con Hugging Face
   Future<bool> _checkIAConnection() async {
     try {
       print('🤖 Verificando conexión...');
@@ -75,56 +72,34 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
             'Por favor verifica tu conexión WiFi o datos móviles.');
       }
 
-      // 2. Verificar conexión con Hugging Face
-      final hasHuggingFace = await _checkIAConnection();
-      if (!hasHuggingFace) {
+      // 2. Verificar conexión con Groq
+      final hasGroq = await _checkIAConnection();
+      if (!hasGroq) {
         throw Exception('No se puede conectar con el servidor de IA.\n'
             'Verifica que tu API key sea válida o intenta más tarde.');
       }
 
-      print('🤖 Generando recomendaciones con IA...');
+      print('🤖 Generando rutina estructurada con IA...');
 
-      // 3. Obtener recomendaciones del servicio IA
-      final recommendations =
-          await RoutineRecommenderService.getRecommendations(
+      // 3. 🆕 Obtener rutina estructurada con ejercicios desde Groq
+      final routineData =
+          await RoutineRecommenderService.generateStructuredRoutine(
         userGoal: _goal.isEmpty ? 'rutina completa de gimnasio' : _goal,
         experienceLevel: _experienceLevel,
         preferredMuscles:
             _selectedMuscles.isEmpty ? ['cuerpo completo'] : _selectedMuscles,
         daysPerWeek: _daysPerWeek,
-        limit: 1,
       );
 
-      if (recommendations.isEmpty) {
-        throw Exception('No se encontraron rutinas recomendadas');
-      }
-
-      final bestMatch = recommendations.first;
+      print('✅ Rutina estructurada recibida de IA');
 
       // 4. Obtener el ID del usuario actual
       final userId = SupabaseConfig.client.auth.currentUser?.id;
       if (userId == null) throw Exception('Usuario no autenticado');
 
-      print('📋 Cargando días de la rutina recomendada...');
-
-      // 5. Cargar los días de la rutina recomendada
-      final routineDays = await SupabaseConfig.client
-          .from('routine_days')
-          .select('''
-            id,
-            day_order,
-            title,
-            notes,
-            duration_minutes
-          ''')
-          .eq('routine_id', bestMatch['id'])
-          .order('day_order', ascending: true);
-
-      print('✅ Encontrados ${routineDays.length} días');
-
-      // 6. Crear nueva rutina con nombre personalizado
+      // 5. Crear nueva rutina con la descripción de IA
       final newRoutineTitle =
-          _routineName.isEmpty ? '${bestMatch['title']} (IA)' : _routineName;
+          _routineName.isEmpty ? 'Rutina Personalizada con IA' : _routineName;
 
       print('💾 Creando nueva rutina: $newRoutineTitle');
 
@@ -132,74 +107,99 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
           .from('routines')
           .insert({
             'title': newRoutineTitle,
-            'description':
-                'Rutina generada por IA basada en tus preferencias: $_goal',
+            'description': routineData['routine_description'] ??
+                'Rutina personalizada generada con IA según tus preferencias',
             'owner_user_id': userId,
             'is_public': false,
           })
           .select()
           .single();
 
-      print('✅ Nueva rutina creada: ${newRoutine['id']}');
+      print('✅ Rutina creada: ${newRoutine['id']}');
 
-      // 7. Copiar los días de la rutina
-      int daysCopied = 0;
-      int exercisesCopied = 0;
+      // 6. 🆕 Crear días Y ejercicios desde el JSON de IA
+      final days = routineData['days'] as List<dynamic>;
+      print('📅 Creando ${days.length} días con ejercicios...');
 
-      for (var day in routineDays) {
-        print('📅 Copiando día ${day['day_order']}: ${day['title']}');
+      int totalExercises = 0;
 
+      for (var dayData in days) {
+        // Crear el día
         final newDay = await SupabaseConfig.client
             .from('routine_days')
             .insert({
               'routine_id': newRoutine['id'],
-              'day_order': day['day_order'],
-              'title': day['title'],
-              'notes': day['notes'],
-              'duration_minutes': day['duration_minutes'],
+              'day_order': dayData['day_number'] ?? (days.indexOf(dayData) + 1),
+              'title': dayData['title'] ?? 'Día ${dayData['day_number']}',
+              'notes': dayData['notes'] ?? '',
+              'duration_minutes': dayData['duration_minutes'] ?? 60,
             })
             .select()
             .single();
 
-        daysCopied++;
+        print('✅ Día creado: ${dayData['title']}');
 
-        // 8. Copiar los ejercicios de cada día
-        final exercises = await SupabaseConfig.client
-            .from('routine_exercises')
-            .select('''
-              exercise_id,
-              exercise_order,
-              sets,
-              reps,
-              target_weight,
-              rest_seconds,
-              tempo,
-              notes
-            ''')
-            .eq('routine_day_id', day['id'])
-            .order('exercise_order', ascending: true);
+        // 7. 🆕 Insertar ejercicios del día
+        final exercises = dayData['exercises'] as List<dynamic>;
+        print('  💪 Insertando ${exercises.length} ejercicios...');
 
-        print('  💪 Copiando ${exercises.length} ejercicios');
+        for (var i = 0; i < exercises.length; i++) {
+          final exerciseData = exercises[i];
 
-        for (var exercise in exercises) {
+          // Primero buscar o crear el ejercicio en la tabla exercises
+          final exerciseName = exerciseData['name'];
+
+          // Buscar si el ejercicio ya existe
+          final existingExercise = await SupabaseConfig.client
+              .from('exercises')
+              .select('id')
+              .eq('name', exerciseName)
+              .maybeSingle();
+
+          String exerciseId;
+
+          if (existingExercise != null) {
+            exerciseId = existingExercise['id'];
+            print('    ✓ Ejercicio existente: $exerciseName');
+          } else {
+            // Crear nuevo ejercicio
+            final newExercise = await SupabaseConfig.client
+                .from('exercises')
+                .insert({
+                  'name': exerciseName,
+                  'description': 'Generado por IA',
+                  'created_by': userId,
+                })
+                .select()
+                .single();
+
+            exerciseId = newExercise['id'];
+            print('    + Nuevo ejercicio creado: $exerciseName');
+          }
+
+          // Insertar el ejercicio en routine_exercises
           await SupabaseConfig.client.from('routine_exercises').insert({
             'routine_day_id': newDay['id'],
-            'exercise_id': exercise['exercise_id'],
-            'exercise_order': exercise['exercise_order'],
-            'sets': exercise['sets'],
-            'reps': exercise['reps'],
-            'target_weight': exercise['target_weight'],
-            'rest_seconds': exercise['rest_seconds'],
-            'tempo': exercise['tempo'],
-            'notes': exercise['notes'],
+            'exercise_id': exerciseId,
+            'exercise_order': i + 1,
+            'sets': exerciseData['sets'] ?? 3,
+            'reps': exerciseData['reps']?.toString() ?? '10',
+            'target_weight': null,
+            'rest_seconds': exerciseData['rest_seconds'] ?? 60,
+            'tempo': null,
+            'notes': exerciseData['notes'] ?? '',
           });
-          exercisesCopied++;
+
+          totalExercises++;
         }
+
+        print(
+            '  ✅ ${exercises.length} ejercicios insertados en ${dayData['title']}');
       }
 
       print('🎉 Rutina completada:');
-      print('  - Días copiados: $daysCopied');
-      print('  - Ejercicios copiados: $exercisesCopied');
+      print('  - Días creados: ${days.length}');
+      print('  - Ejercicios totales: $totalExercises');
 
       if (mounted) {
         Navigator.pop(context); // Cerrar diálogo
@@ -207,10 +207,10 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
           SnackBar(
             content: Text(
               '🎉 ¡Rutina "$newRoutineTitle" creada!\n'
-              '$daysCopied días con $exercisesCopied ejercicios',
+              '${days.length} días con $totalExercises ejercicios',
             ),
             backgroundColor: Colors.green,
-            duration: const Duration(seconds: 4),
+            duration: const Duration(seconds: 5),
           ),
         );
 

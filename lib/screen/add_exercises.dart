@@ -18,7 +18,7 @@ class AddExercisesToDayPage extends StatefulWidget {
 
 class _AddExercisesToDayPageState extends State<AddExercisesToDayPage> {
   List<Map<String, dynamic>> _availableExercises = [];
-  List<Map<String, dynamic>> _selectedExercises = [];
+  final List<Map<String, dynamic>> _selectedExercises = [];
   bool _isLoading = true;
   bool _isSaving = false;
   String? _errorMessage;
