@@ -81,7 +81,7 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
 
       print('🤖 Generando rutina estructurada con IA...');
 
-      // 3. 🆕 Obtener rutina estructurada con ejercicios desde Groq
+      // 3. Obtener rutina estructurada con ejercicios desde Groq
       final routineData =
           await RoutineRecommenderService.generateStructuredRoutine(
         userGoal: _goal.isEmpty ? 'rutina completa de gimnasio' : _goal,
@@ -117,7 +117,7 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
 
       print('✅ Rutina creada: ${newRoutine['id']}');
 
-      // 6. 🆕 Crear días Y ejercicios desde el JSON de IA
+      // 6. Crear días Y ejercicios desde el JSON de IA
       final days = routineData['days'] as List<dynamic>;
       print('📅 Creando ${days.length} días con ejercicios...');
 
@@ -139,7 +139,7 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
 
         print('✅ Día creado: ${dayData['title']}');
 
-        // 7. 🆕 Insertar ejercicios del día
+        // 7. Insertar ejercicios del día
         final exercises = dayData['exercises'] as List<dynamic>;
         print('  💪 Insertando ${exercises.length} ejercicios...');
 
@@ -202,7 +202,10 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
       print('  - Ejercicios totales: $totalExercises');
 
       if (mounted) {
-        Navigator.pop(context); // Cerrar diálogo
+        // Cerrar el diálogo de generación
+        Navigator.pop(context);
+        
+        // Mostrar mensaje de éxito
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -210,11 +213,11 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
               '${days.length} días con $totalExercises ejercicios',
             ),
             backgroundColor: Colors.green,
-            duration: const Duration(seconds: 5),
+            duration: const Duration(seconds: 3),
           ),
         );
 
-        // Retornar true para indicar que se creó una rutina
+        // Volver a la pantalla de rutinas con señal de que se creó una rutina
         Navigator.pop(context, true);
       }
     } catch (e) {

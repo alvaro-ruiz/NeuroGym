@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:neuro_gym/bd/supabase_config.dart';
 import 'package:neuro_gym/screen/add_exercises.dart';
+import 'package:neuro_gym/screen/active_workout_session.dart';
 
 class RoutineDetailPage extends StatefulWidget {
   final String routineId;
@@ -183,6 +184,7 @@ class _RoutineDetailPageState extends State<RoutineDetailPage> {
             builder: (context) => DayExercisesPage(
               dayId: day['id'],
               dayTitle: day['title'] ?? 'Día ${day['day_order']}',
+              routineId: widget.routineId,
             ),
           ),
         );
@@ -289,11 +291,13 @@ class _RoutineDetailPageState extends State<RoutineDetailPage> {
 class DayExercisesPage extends StatefulWidget {
   final String dayId;
   final String dayTitle;
+  final String routineId;
 
   const DayExercisesPage({
     super.key,
     required this.dayId,
     required this.dayTitle,
+    required this.routineId,
   });
 
   @override
@@ -357,15 +361,46 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
     }
   }
 
-  void _startWorkout() {
+  Future<void> _startWorkout() async {
     print('🏋️ Iniciando entrenamiento: ${widget.dayTitle}');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Iniciando entrenamiento: ${widget.dayTitle}'),
-        backgroundColor: Colors.orangeAccent,
-      ),
-    );
-    // Aquí navegarás a la pantalla de entrenamiento activo
+
+    if (_exercises.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No hay ejercicios en este día'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      // Navegar a la pantalla de entrenamiento activo
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ActiveWorkoutSession(
+            routineId: widget.routineId,
+            routineDayId: widget.dayId,
+            dayTitle: widget.dayTitle,
+            exercises: _exercises,
+          ),
+        ),
+      );
+
+      // Si se completó el entrenamiento, recargar la página
+      if (result == true) {
+        _loadExercises();
+      }
+    } catch (e) {
+      print('❌ Error al iniciar entrenamiento: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
