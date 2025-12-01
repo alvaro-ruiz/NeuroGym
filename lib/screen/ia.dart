@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:neuro_gym/screen/routine_detail.dart';
 import 'package:neuro_gym/services/routine_recomender.dart';
 import 'package:neuro_gym/bd/supabase_config.dart';
 
@@ -38,6 +39,8 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
     'Perder peso',
     'Mejorar resistencia',
   ];
+
+  get newRoutineName => null;
 
   Future<bool> _checkInternetConnection() async {
     try {
@@ -116,8 +119,7 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
           .single();
 
       print('✅ Rutina creada: ${newRoutine['id']}');
-
-      // 6. Crear días Y ejercicios desde el JSON de IA
+      // 6. 🆕 Crear días Y ejercicios desde el JSON de IA
       final days = routineData['days'] as List<dynamic>;
       print('📅 Creando ${days.length} días con ejercicios...');
 
@@ -139,14 +141,12 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
 
         print('✅ Día creado: ${dayData['title']}');
 
-        // 7. Insertar ejercicios del día
+        // 7. 🆕 Insertar ejercicios del día
         final exercises = dayData['exercises'] as List<dynamic>;
         print('  💪 Insertando ${exercises.length} ejercicios...');
 
         for (var i = 0; i < exercises.length; i++) {
           final exerciseData = exercises[i];
-
-          // Primero buscar o crear el ejercicio en la tabla exercises
           final exerciseName = exerciseData['name'];
 
           // Buscar si el ejercicio ya existe
@@ -192,9 +192,6 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
 
           totalExercises++;
         }
-
-        print(
-            '  ✅ ${exercises.length} ejercicios insertados en ${dayData['title']}');
       }
 
       print('🎉 Rutina completada:');
@@ -202,14 +199,14 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
       print('  - Ejercicios totales: $totalExercises');
 
       if (mounted) {
-        // Cerrar el diálogo de generación
-        Navigator.pop(context);
-        
+        // ✅ CORRECCIÓN: Cerrar TODOS los diálogos antes de navegar
+        Navigator.of(context).popUntil((route) => route.isFirst);
+
         // Mostrar mensaje de éxito
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '🎉 ¡Rutina "$newRoutineTitle" creada!\n'
+              '🎉 ¡Rutina "$newRoutineName" creada!\n'
               '${days.length} días con $totalExercises ejercicios',
             ),
             backgroundColor: Colors.green,
@@ -217,12 +214,27 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
           ),
         );
 
-        // Volver a la pantalla de rutinas con señal de que se creó una rutina
-        Navigator.pop(context, true);
+        // ✅ NAVEGAR A LA RUTINA GENERADA después de un pequeño delay
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RoutineDetailPage(
+                routineId: newRoutine['id'],
+                routineTitle: newRoutineName,
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
       print('❌ Error al generar rutina: $e');
       if (mounted) {
+        // Cerrar diálogo de generación
+        Navigator.pop(context);
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(

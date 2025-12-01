@@ -361,46 +361,18 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
     }
   }
 
-  Future<void> _startWorkout() async {
-    print('🏋️ Iniciando entrenamiento: ${widget.dayTitle}');
-
-    if (_exercises.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No hay ejercicios en este día'),
-          backgroundColor: Colors.red,
+  void _startWorkout() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ActiveTrainingSession(
+          routineId: widget.routineId,
+          routineDayId: widget.dayId,
+          dayTitle: widget.dayTitle,
+          exercises: _exercises,
         ),
-      );
-      return;
-    }
-
-    try {
-      // Navegar a la pantalla de entrenamiento activo
-      final result = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ActiveWorkoutSession(
-            routineId: widget.routineId,
-            routineDayId: widget.dayId,
-            dayTitle: widget.dayTitle,
-            exercises: _exercises,
-          ),
-        ),
-      );
-
-      // Si se completó el entrenamiento, recargar la página
-      if (result == true) {
-        _loadExercises();
-      }
-    } catch (e) {
-      print('❌ Error al iniciar entrenamiento: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+      ),
+    );
   }
 
   @override
