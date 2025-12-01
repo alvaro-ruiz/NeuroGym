@@ -1,27 +1,9 @@
-import 'dart:math';
-// Necesitas importar esto para jsonDecode
-import 'dart:convert';
+import 'package:neuro_gym/bd/supabase_config.dart';
 import 'package:flutter/material.dart';
 
-/// Sistema de rangos basado en Strength Level Standards
-/// Fuente: https://strengthlevel.com/strength-standards
-class StrengthStandards {
-  // Ejercicios principales para clasificación
-  static const List<String> mainLifts = [
-    'Sentadilla',
-    'Press Banca',
-    'Peso Muerto',
-    'Press Militar',
-  ];
-
-  // Rangos: Novato, Intermedio, Avanzado, Élite
-  static const List<String> ranks = [
-    'Novato',
-    'Intermedio',
-    'Avanzado',
-    'Élite'
-  ];
-
+/// Servicio para calcular rankings de fuerza usando procedimiento almacenado
+class StrengthService {
+  // Colores de rangos
   static const Map<String, Color> rankColors = {
     'Novato': Color(0xFF9E9E9E), // Gris
     'Intermedio': Color(0xFF4CAF50), // Verde
@@ -29,226 +11,113 @@ class StrengthStandards {
     'Élite': Color(0xFFFF9800), // Naranja/Oro
   };
 
-  /// Calcula el rango de un usuario basado en peso corporal y levantamientos
-  static Map<String, dynamic> calculateUserRank({
-    required double bodyWeight, // kg
-    required Map<String, double> maxLifts, // ejercicio -> peso máximo en kg
-  }) {
-    if (bodyWeight <= 0) {
-      return {
-        'overall_rank': 'Sin datos',
-        'rank_index': 0,
-        'lifts_analysis': {},
-        'strength_score': 0.0,
-      };
-    }
+  /// Obtiene el ranking completo del usuario usando el procedimiento SQL
+  static Future<Map<String, dynamic>> getUserStrengthRank(String userId) async {
+    try {
+      print('🏋️ Calculando ranking de fuerza para usuario: $userId');
 
-    Map<String, Map<String, dynamic>> liftsAnalysis = {};
-    double totalScore = 0;
-    int validLifts = 0;
+      // 1. Obtener ranking general
+      final overallResult = await SupabaseConfig.client
+          .rpc('get_overall_strength_rank', params: {'p_user_id': userId});
 
-    for (var exercise in mainLifts) {
-      // Buscar el ejercicio en los levantamientos del usuario (case insensitive)
-      double? weight;
-      for (var entry in maxLifts.entries) {
-        if (entry.key.toLowerCase().contains(exercise.toLowerCase()) ||
-            exercise.toLowerCase().contains(entry.key.toLowerCase())) {
-          weight = entry.value;
-          break;
+      if (overallResult == null || overallResult.isEmpty) {
+        return {
+          'overall_rank': 'Sin datos',
+          'rank_index': 0,
+          'strength_score': 0.0,
+          'valid_lifts': 0,
+          'body_weight': 75.0,
+          'lifts_analysis': {},
+        };
+      }
+
+      final overall = overallResult[0];
+
+      // 2. Obtener análisis por ejercicio
+      final liftsResult = await SupabaseConfig.client.rpc(
+        'calculate_strength_rank',
+        params: {
+          'p_user_id': userId,
+          'p_body_weight': overall['body_weight'],
+        },
+      );
+
+      // Convertir a Map para fácil acceso
+      Map<String, dynamic> liftsAnalysis = {};
+      if (liftsResult != null) {
+        for (var lift in liftsResult) {
+          liftsAnalysis[lift['exercise_name']] = {
+            'exercise': lift['exercise_name'],
+            'weight': lift['max_weight'],
+            'ratio': lift['ratio'],
+            'rank': lift['rank'],
+            'score': lift['score'],
+            'next_target': lift['next_rank'] != null
+                ? {
+                    'rank': lift['next_rank'],
+                    'target_weight': lift['next_target_weight'],
+                    'progress': lift['progress'],
+                  }
+                : null,
+          };
         }
       }
 
-      if (weight != null && weight > 0) {
-        final analysis = _analyzeExercise(exercise, bodyWeight, weight);
-        liftsAnalysis[exercise] = analysis;
-        totalScore += analysis['score'];
-        validLifts++;
-      }
-    }
-
-    // Calcular rango general
-    final avgScore = validLifts > 0 ? totalScore / validLifts : 0.0;
-    final overallRank = _scoreToRank(avgScore);
-
-    return {
-      'overall_rank': overallRank,
-      'rank_index': ranks.indexOf(overallRank),
-      'lifts_analysis': liftsAnalysis,
-      'strength_score': avgScore,
-      'valid_lifts': validLifts,
-    };
-  }
-
-  /// Analiza un ejercicio específico
-  static Map<String, dynamic> _analyzeExercise(
-    String exercise,
-    double bodyWeight,
-    double liftedWeight,
-  ) {
-    final standards = _getStandards(exercise, bodyWeight);
-    final ratio = liftedWeight / bodyWeight;
-
-    // Calcular score (0-3) basado en estándares
-    double score;
-    String rank;
-
-    if (ratio >= standards['elite']!) {
-      score = 3.0;
-      rank = 'Élite';
-    } else if (ratio >= standards['advanced']!) {
-      score = 2.0 +
-          (ratio - standards['advanced']!) /
-              (standards['elite']! - standards['advanced']!);
-      rank = 'Avanzado';
-    } else if (ratio >= standards['intermediate']!) {
-      score = 1.0 +
-          (ratio - standards['intermediate']!) /
-              (standards['advanced']! - standards['intermediate']!);
-      rank = 'Intermedio';
-    } else {
-      score = (ratio / standards['intermediate']!).clamp(0.0, 1.0);
-      rank = 'Novato';
-    }
-
-    return {
-      'exercise': exercise,
-      'weight': liftedWeight,
-      'ratio': ratio,
-      'rank': rank,
-      'score': score,
-      'standards': standards,
-      'next_target': _getNextTarget(ratio, standards),
-    };
-  }
-
-  /// Obtiene estándares de fuerza para un ejercicio
-  /// Basado en Strength Level (promedios para hombre de 75kg)
-  /// Valores expresados como múltiplos del peso corporal
-  static Map<String, double> _getStandards(String exercise, double bodyWeight) {
-    // Fórmulas de regresión basadas en datos de strengthlevel.com
-    // Ajustadas para peso corporal usando coeficiente de Allometric Scaling
-    final bwFactor = pow(bodyWeight / 75.0, 0.66).toDouble();
-
-    switch (exercise.toLowerCase()) {
-      case 'sentadilla':
-        return {
-          'novice': 0.78 * bwFactor,
-          'intermediate': 1.42 * bwFactor,
-          'advanced': 2.05 * bwFactor,
-          'elite': 2.72 * bwFactor,
-        };
-
-      case 'press banca':
-      case 'bench press':
-        return {
-          'novice': 0.53 * bwFactor,
-          'intermediate': 0.97 * bwFactor,
-          'advanced': 1.45 * bwFactor,
-          'elite': 1.96 * bwFactor,
-        };
-
-      case 'peso muerto':
-      case 'deadlift':
-        return {
-          'novice': 0.97 * bwFactor,
-          'intermediate': 1.74 * bwFactor,
-          'advanced': 2.51 * bwFactor,
-          'elite': 3.31 * bwFactor,
-        };
-
-      case 'press militar':
-      case 'overhead press':
-        return {
-          'novice': 0.35 * bwFactor,
-          'intermediate': 0.65 * bwFactor,
-          'advanced': 0.97 * bwFactor,
-          'elite': 1.32 * bwFactor,
-        };
-
-      default:
-        // Estándar genérico
-        return {
-          'novice': 0.5 * bwFactor,
-          'intermediate': 1.0 * bwFactor,
-          'advanced': 1.5 * bwFactor,
-          'elite': 2.0 * bwFactor,
-        };
-    }
-  }
-
-  /// Convierte score a rango
-  static String _scoreToRank(double score) {
-    if (score >= 3.0) return 'Élite';
-    if (score >= 2.0) return 'Avanzado';
-    if (score >= 1.0) return 'Intermedio';
-    return 'Novato';
-  }
-
-  /// Calcula el siguiente objetivo
-  static Map<String, dynamic>? _getNextTarget(
-    double currentRatio,
-    Map<String, double> standards,
-  ) {
-    if (currentRatio < standards['intermediate']!) {
       return {
-        'rank': 'Intermedio',
-        'target_ratio': standards['intermediate'],
-        'progress': currentRatio / standards['intermediate']!,
+        'overall_rank': overall['overall_rank'],
+        'rank_index': overall['rank_index'],
+        'strength_score': overall['strength_score'],
+        'valid_lifts': overall['valid_lifts'],
+        'body_weight': overall['body_weight'],
+        'lifts_analysis': liftsAnalysis,
       };
-    } else if (currentRatio < standards['advanced']!) {
-      return {
-        'rank': 'Avanzado',
-        'target_ratio': standards['advanced'],
-        'progress': (currentRatio - standards['intermediate']!) /
-            (standards['advanced']! - standards['intermediate']!),
-      };
-    } else if (currentRatio < standards['elite']!) {
-      return {
-        'rank': 'Élite',
-        'target_ratio': standards['elite'],
-        'progress': (currentRatio - standards['advanced']!) /
-            (standards['elite']! - standards['advanced']!),
-      };
+    } catch (e) {
+      print('❌ Error al obtener ranking: $e');
+      rethrow;
     }
-    return null; // Ya es élite
   }
 
-  /// Extrae el peso máximo de cada ejercicio desde workout_logs
-  static Future<Map<String, double>> extractMaxLiftsFromLogs(
-    List<Map<String, dynamic>> workoutLogs,
+  /// Obtiene solo el ranking de un ejercicio específico
+  static Future<Map<String, dynamic>?> getExerciseRank(
+    String userId,
+    String exerciseName,
   ) async {
-    Map<String, double> maxLifts = {};
+    try {
+      final result = await SupabaseConfig.client.rpc(
+        'calculate_strength_rank',
+        params: {'p_user_id': userId},
+      );
 
-    for (var workout in workoutLogs) {
-      if (workout['exercises_log'] != null) {
-        try {
-          final exercisesLog = jsonDecode(workout['exercises_log']);
+      if (result == null) return null;
 
-          for (var exercise in exercisesLog) {
-            final exerciseName = exercise['exercise_name'] ?? '';
-            if (exerciseName.isEmpty) continue;
-
-            final sets = exercise['sets'] ?? [];
-            for (var set in sets) {
-              final weight = (set['weight'] ?? 0).toDouble();
-              if (weight > 0) {
-                if (!maxLifts.containsKey(exerciseName) ||
-                    weight > maxLifts[exerciseName]!) {
-                  maxLifts[exerciseName] = weight;
-                }
-              }
-            }
-          }
-        } catch (e) {
-          print('Error parseando exercises_log: $e');
+      for (var lift in result) {
+        if (lift['exercise_name'].toLowerCase() ==
+            exerciseName.toLowerCase()) {
+          return {
+            'exercise': lift['exercise_name'],
+            'weight': lift['max_weight'],
+            'ratio': lift['ratio'],
+            'rank': lift['rank'],
+            'score': lift['score'],
+            'next_target': lift['next_rank'] != null
+                ? {
+                    'rank': lift['next_rank'],
+                    'target_weight': lift['next_target_weight'],
+                    'progress': lift['progress'],
+                  }
+                : null,
+          };
         }
       }
-    }
 
-    return maxLifts;
+      return null;
+    } catch (e) {
+      print('❌ Error al obtener ranking de ejercicio: $e');
+      return null;
+    }
   }
 
-  /// Obtiene el emoji del rango
+  /// Obtiene emoji del rango
   static String getRankEmoji(String rank) {
     switch (rank) {
       case 'Élite':
@@ -285,29 +154,86 @@ class StrengthStandards {
     return '${ratio.toStringAsFixed(2)}x';
   }
 
-  /// Calcula peso objetivo para siguiente rango
-  static double calculateTargetWeight(
-    double bodyWeight,
-    String exercise,
-    String currentRank,
-  ) {
-    final standards = _getStandards(exercise, bodyWeight);
-    String nextRank;
+  /// Lista de ejercicios principales para seguimiento
+  static const List<String> mainLifts = [
+    'Sentadilla',
+    'Press Banca',
+    'Peso Muerto',
+    'Press Militar',
+  ];
 
-    switch (currentRank) {
+  /// Verifica si un ejercicio es principal
+  static bool isMainLift(String exerciseName) {
+    final lowerName = exerciseName.toLowerCase();
+    return lowerName.contains('sentadilla') ||
+        lowerName.contains('squat') ||
+        lowerName.contains('press banca') ||
+        lowerName.contains('bench') ||
+        lowerName.contains('peso muerto') ||
+        lowerName.contains('deadlift') ||
+        lowerName.contains('press militar') ||
+        lowerName.contains('overhead') ||
+        lowerName.contains('military');
+  }
+
+  /// Obtiene el color del rango
+  static Color getRankColor(String rank) {
+    return rankColors[rank] ?? Colors.grey;
+  }
+
+  /// Obtiene sugerencias para mejorar
+  static List<String> getImprovementTips(String rank) {
+    switch (rank) {
       case 'Novato':
-        nextRank = 'intermediate';
-        break;
+        return [
+          'Enfócate en la técnica correcta antes que en el peso',
+          'Sé consistente: entrena 3-4 veces por semana',
+          'Come suficiente proteína (1.6-2g por kg de peso)',
+          'Descansa adecuadamente entre sesiones',
+          'Sigue una progresión lineal simple',
+        ];
       case 'Intermedio':
-        nextRank = 'advanced';
-        break;
+        return [
+          'Incorpora periodización en tu entrenamiento',
+          'Varía el rango de repeticiones (5-15 reps)',
+          'Trabaja en tus puntos débiles específicos',
+          'Considera un deload cada 4-6 semanas',
+          'Optimiza tu recuperación y nutrición',
+        ];
       case 'Avanzado':
-        nextRank = 'elite';
-        break;
+        return [
+          'Implementa bloques de especialización',
+          'Usa técnicas avanzadas (clusters, rest-pause)',
+          'Monitorea tu fatiga cuidadosamente',
+          'Considera trabajar con un coach',
+          'Perfecciona cada aspecto de tu técnica',
+        ];
+      case 'Élite':
+        return [
+          'Mantén la consistencia a largo plazo',
+          'Previene lesiones con trabajo preventivo',
+          'Especialízate en tus mejores levantamientos',
+          'Considera competir si te interesa',
+          '¡Sigue siendo una inspiración!',
+        ];
       default:
-        return 0;
+        return ['Completa entrenamientos para obtener sugerencias'];
     }
+  }
 
-    return standards[nextRank]! * bodyWeight;
+  /// Calcula el tiempo estimado para alcanzar el siguiente rango
+  static String estimateTimeToNextRank(double currentProgress) {
+    // Estimación muy aproximada basada en progreso actual
+    if (currentProgress >= 0.9) {
+      return '1-2 meses';
+    } else if (currentProgress >= 0.7) {
+      return '2-4 meses';
+    } else if (currentProgress >= 0.5) {
+      return '4-6 meses';
+    } else if (currentProgress >= 0.3) {
+      return '6-12 meses';
+    } else {
+      return '12+ meses';
+    }
   }
 }

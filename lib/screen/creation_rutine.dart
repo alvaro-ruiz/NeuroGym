@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:neuro_gym/bd/supabase_config.dart';
+import 'package:neuro_gym/screen/ia.dart';
 
 class CreateRoutinePage extends StatefulWidget {
   const CreateRoutinePage({super.key});
@@ -71,7 +72,6 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
         return;
       }
 
-      // Validar que todos los días tengan título
       for (var i = 0; i < _days.length; i++) {
         final dayTitle = _days[i]['controller_title'].text.trim();
         if (dayTitle.isEmpty) {
@@ -90,7 +90,6 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
 
       print('📝 Creando rutina: $title');
 
-      // Crear la rutina
       final routineResponse = await SupabaseConfig.client
           .from('routines')
           .insert({
@@ -104,7 +103,6 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
 
       print('✅ Rutina creada: ${routineResponse['id']}');
 
-      // Crear los días
       for (var i = 0; i < _days.length; i++) {
         final day = _days[i];
         final dayTitle = day['controller_title'].text.trim();
@@ -130,8 +128,7 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
           ),
         );
 
-        // Volver atrás
-        Navigator.pop(context, true); // true indica que se creó una rutina
+        Navigator.pop(context, true);
       }
     } catch (e) {
       print('❌ Error al crear rutina: $e');
@@ -144,6 +141,21 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  // 🆕 NUEVA FUNCIÓN: Abrir diálogo de IA
+  Future<void> _openAIGenerator() async {
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const AIRoutineGeneratorDialog(),
+    );
+
+    if (result == true && mounted) {
+      // La rutina se creó con IA, volver a la pantalla anterior
+      Navigator.pop(context, true);
     }
   }
 
@@ -172,16 +184,105 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
           ),
         ),
         centerTitle: true,
+        // 🆕 BOTÓN DE IA EN APPBAR
+        actions: [
+          IconButton(
+            onPressed: _openAIGenerator,
+            icon: const Icon(
+              Icons.psychology,
+              color: Colors.orangeAccent,
+              size: 28,
+            ),
+            tooltip: 'Generar con IA',
+          ),
+        ],
       ),
       body: Column(
         children: [
+          // 🆕 BANNER DE IA
+          GestureDetector(
+            onTap: _openAIGenerator,
+            child: Container(
+              margin: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.purple.withOpacity(0.3),
+                    Colors.blue.withOpacity(0.3),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.purple.withOpacity(0.5),
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.purple.withOpacity(0.3),
+                    blurRadius: 15,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withOpacity(0.3),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.purple,
+                        width: 2,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.psychology,
+                      color: Colors.purple,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'GENERA TU RUTINA CON IA',
+                          style: GoogleFonts.bebasNeue(
+                            color: Colors.purple,
+                            fontSize: 18,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Crea una rutina personalizada en segundos',
+                          style: GoogleFonts.montserrat(
+                            color: Colors.white.withOpacity(0.7),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.purple,
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Mensaje de error
                   if (_errorMessage != null)
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -199,16 +300,12 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
                         ),
                       ),
                     ),
-
-                  // Título de la rutina
                   _buildTextField(
                     'NOMBRE DE LA RUTINA',
                     'Ej: Full Body 3x',
                     _titleController,
                   ),
                   const SizedBox(height: 20),
-
-                  // Descripción
                   _buildTextField(
                     'DESCRIPCIÓN (OPCIONAL)',
                     'Describe tu rutina...',
@@ -216,8 +313,6 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
                     maxLines: 3,
                   ),
                   const SizedBox(height: 20),
-
-                  // Switch público/privado
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -264,10 +359,7 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 30),
-
-                  // Título sección días
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -288,10 +380,7 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 15),
-
-                  // Lista de días
                   if (_days.isEmpty)
                     Center(
                       child: Padding(
@@ -333,7 +422,6 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
             ),
           ),
 
-          // Botón crear
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -462,7 +550,6 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header con número y botón eliminar
           Row(
             children: [
               Container(
@@ -503,10 +590,7 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
               ),
             ],
           ),
-
           const SizedBox(height: 15),
-
-          // Nombre del día
           TextField(
             controller: day['controller_title'],
             style: const TextStyle(color: Colors.orangeAccent),
@@ -541,10 +625,7 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
               ),
             ),
           ),
-
           const SizedBox(height: 12),
-
-          // Notas
           TextField(
             controller: day['controller_notes'],
             maxLines: 2,
@@ -580,10 +661,7 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
               ),
             ),
           ),
-
           const SizedBox(height: 12),
-
-          // Duración
           Row(
             children: [
               Icon(

@@ -64,7 +64,6 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
     }
   }
 
-  // 🗑️ NUEVA FUNCIÓN: Borrar rutina
   Future<void> _deleteRoutine(String routineId, String routineTitle) async {
     // Mostrar diálogo de confirmación
     final confirm = await showDialog<bool>(
@@ -86,7 +85,7 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
           ),
         ),
         content: Text(
-          '¿Estás seguro de que quieres eliminar "$routineTitle"?\n\nEsta acción no se puede deshacer.',
+          '¿Estás seguro de que quieres eliminar "$routineTitle"?\n\nEsta acción eliminará:\n• Todos los días de la rutina\n• Todos los ejercicios\n• Historial de entrenamientos\n\nEsto NO se puede deshacer.',
           style: GoogleFonts.montserrat(
             color: Colors.white,
             fontSize: 14,
@@ -109,7 +108,7 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
               foregroundColor: Colors.white,
             ),
             child: Text(
-              'ELIMINAR',
+              'ELIMINAR TODO',
               style: GoogleFonts.montserrat(
                 fontWeight: FontWeight.bold,
               ),
@@ -122,18 +121,47 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
     if (confirm != true) return;
 
     try {
-      print('🗑️ Eliminando rutina: $routineId');
+      print('🗑️ Eliminando rutina completa: $routineId');
 
-      // Eliminar la rutina (cascade eliminará días y ejercicios automáticamente)
+      // Obtener todos los días de la rutina
+      final days = await SupabaseConfig.client
+          .from('routine_days')
+          .select('id')
+          .eq('routine_id', routineId);
+
+      print('📅 Días encontrados: ${days.length}');
+
+      // Para cada día, eliminar sus ejercicios
+      for (var day in days) {
+        final dayId = day['id'];
+
+        // Eliminar ejercicios del día
+        await SupabaseConfig.client
+            .from('routine_exercises')
+            .delete()
+            .eq('routine_day_id', dayId);
+
+        print('✅ Ejercicios del día $dayId eliminados');
+      }
+
+      // Eliminar los días
+      await SupabaseConfig.client
+          .from('routine_days')
+          .delete()
+          .eq('routine_id', routineId);
+
+      print('✅ Días eliminados');
+
       await SupabaseConfig.client.from('routines').delete().eq('id', routineId);
 
-      print('✅ Rutina eliminada exitosamente');
+      print('✅ Rutina eliminada completamente');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Rutina "$routineTitle" eliminada'),
+            content: Text('Rutina "$routineTitle" eliminada completamente'),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
           ),
         );
 
@@ -147,6 +175,7 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
           SnackBar(
             content: Text('Error al eliminar: ${e.toString()}'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
           ),
         );
       }

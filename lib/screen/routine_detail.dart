@@ -38,7 +38,6 @@ class _RoutineDetailPageState extends State<RoutineDetailPage> {
     try {
       print('🔍 Cargando días de rutina: ${widget.routineId}');
 
-      // Cargar solo los días de la rutina
       final daysResponse = await SupabaseConfig.client
           .from('routine_days')
           .select('id, day_order, title, notes, duration_minutes')
@@ -189,7 +188,6 @@ class _RoutineDetailPageState extends State<RoutineDetailPage> {
           ),
         );
 
-        // Si se agregaron ejercicios, puedes recargar aquí si es necesario
         if (result == true) {
           _loadRoutineDays();
         }
@@ -213,7 +211,6 @@ class _RoutineDetailPageState extends State<RoutineDetailPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Icono
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -230,8 +227,6 @@ class _RoutineDetailPageState extends State<RoutineDetailPage> {
               ),
             ),
             const SizedBox(height: 15),
-
-            // Título
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Text(
@@ -251,8 +246,6 @@ class _RoutineDetailPageState extends State<RoutineDetailPage> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-
-            // Duración
             if (day['duration_minutes'] != null) ...[
               const SizedBox(height: 8),
               Text(
@@ -287,7 +280,10 @@ class _RoutineDetailPageState extends State<RoutineDetailPage> {
   }
 }
 
-// Nueva pantalla para mostrar ejercicios del día
+// ══════════════════════════════════════════════════════════════════════════════
+// PANTALLA DE EJERCICIOS DEL DÍA - CON BOTONES PARA BORRAR Y MOVER
+// ══════════════════════════════════════════════════════════════════════════════
+
 class DayExercisesPage extends StatefulWidget {
   final String dayId;
   final String dayTitle;
@@ -361,6 +357,126 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
     }
   }
 
+  // 🗑️ NUEVA FUNCIÓN: Borrar ejercicio
+  Future<void> _deleteExercise(String exerciseId, String exerciseName) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: Colors.orangeAccent.withOpacity(0.5),
+            width: 1,
+          ),
+        ),
+        title: Text(
+          '¿Eliminar ejercicio?',
+          style: GoogleFonts.montserrat(
+            color: Colors.orangeAccent,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          '¿Estás seguro de eliminar "$exerciseName"?',
+          style: GoogleFonts.montserrat(
+            color: Colors.white,
+            fontSize: 14,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'CANCELAR',
+              style: GoogleFonts.montserrat(
+                color: Colors.orangeAccent.withOpacity(0.6),
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('ELIMINAR'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      print('🗑️ Eliminando ejercicio: $exerciseId');
+
+      await SupabaseConfig.client
+          .from('routine_exercises')
+          .delete()
+          .eq('id', exerciseId);
+
+      print('✅ Ejercicio eliminado exitosamente');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ejercicio "$exerciseName" eliminado'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        _loadExercises();
+      }
+    } catch (e) {
+      print('❌ Error al eliminar ejercicio: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // ↕️ NUEVA FUNCIÓN: Mover ejercicio
+  Future<void> _moveExercise(int currentIndex, bool moveUp) async {
+    if (moveUp && currentIndex == 0) return;
+    if (!moveUp && currentIndex == _exercises.length - 1) return;
+
+    final targetIndex = moveUp ? currentIndex - 1 : currentIndex + 1;
+
+    try {
+      print('↕️ Moviendo ejercicio de $currentIndex a $targetIndex');
+
+      final currentExercise = _exercises[currentIndex];
+      final targetExercise = _exercises[targetIndex];
+
+      // Intercambiar los exercise_order
+      await SupabaseConfig.client.from('routine_exercises').update(
+          {'exercise_order': targetIndex + 1}).eq('id', currentExercise['id']);
+
+      await SupabaseConfig.client.from('routine_exercises').update(
+          {'exercise_order': currentIndex + 1}).eq('id', targetExercise['id']);
+
+      print('✅ Ejercicios reordenados');
+
+      _loadExercises();
+    } catch (e) {
+      print('❌ Error al mover ejercicio: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _startWorkout() {
     Navigator.push(
       context,
@@ -400,7 +516,6 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
           ),
         ),
         centerTitle: true,
-        // 🆕 BOTÓN AGREGAR EJERCICIOS
         actions: [
           IconButton(
             onPressed: () async {
@@ -415,7 +530,7 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
               );
 
               if (result == true) {
-                _loadExercises(); // Recargar lista de ejercicios
+                _loadExercises();
               }
             },
             icon: const Icon(
@@ -448,7 +563,6 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
             )
           : Column(
               children: [
-                // Lista de ejercicios
                 Expanded(
                   child: _exercises.isEmpty
                       ? Center(
@@ -504,8 +618,6 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
                           },
                         ),
                 ),
-
-                // Botón fijo de iniciar entrenamiento
                 if (_exercises.isNotEmpty)
                   Container(
                     padding: const EdgeInsets.all(20),
@@ -574,7 +686,6 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Número y nombre
           Row(
             children: [
               Container(
@@ -620,12 +731,53 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
                   ],
                 ),
               ),
+              // 🆕 BOTONES DE MOVER
+              Column(
+                children: [
+                  IconButton(
+                    onPressed:
+                        index > 0 ? () => _moveExercise(index, true) : null,
+                    icon: Icon(
+                      Icons.arrow_upward,
+                      color: index > 0
+                          ? Colors.orangeAccent
+                          : Colors.orangeAccent.withOpacity(0.3),
+                      size: 20,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  IconButton(
+                    onPressed: index < _exercises.length - 1
+                        ? () => _moveExercise(index, false)
+                        : null,
+                    icon: Icon(
+                      Icons.arrow_downward,
+                      color: index < _exercises.length - 1
+                          ? Colors.orangeAccent
+                          : Colors.orangeAccent.withOpacity(0.3),
+                      size: 20,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+              // 🆕 BOTÓN DE BORRAR
+              IconButton(
+                onPressed: () => _deleteExercise(
+                  exercise['id'],
+                  exerciseData['name'] ?? 'Ejercicio',
+                ),
+                icon: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.red,
+                  size: 24,
+                ),
+              ),
             ],
           ),
-
           const SizedBox(height: 15),
-
-          // Detalles
           Wrap(
             spacing: 12,
             runSpacing: 10,
@@ -650,7 +802,6 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
                 ),
             ],
           ),
-
           if (exercise['notes'] != null &&
               exercise['notes'].toString().isNotEmpty) ...[
             const SizedBox(height: 12),

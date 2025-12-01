@@ -88,10 +88,6 @@ class _StatsPageState extends State<StatsPage>
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// TAB 1: HISTORIAL DE ENTRENAMIENTOS
-// ═══════════════════════════════════════════════════════════════════════════
-
 class WorkoutHistoryTab extends StatefulWidget {
   const WorkoutHistoryTab({super.key});
 
@@ -125,7 +121,7 @@ class _WorkoutHistoryTabState extends State<WorkoutHistoryTab>
       final userId = SupabaseConfig.client.auth.currentUser?.id;
       if (userId == null) throw Exception('Usuario no autenticado');
 
-      print('🔍 Cargando historial de entrenamientos...');
+      print('📋 Cargando historial de entrenamientos...');
 
       final history = await SupabaseConfig.client
           .from('workout_logs')
@@ -737,7 +733,7 @@ class _WorkoutHistoryTabState extends State<WorkoutHistoryTab>
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TAB 2: RANGO DE FUERZA
+// TAB 2: RANGO DE FUERZA - ACTUALIZADO PARA USAR StrengthService
 // ═══════════════════════════════════════════════════════════════════════════
 
 class StrengthRankTab extends StatefulWidget {
@@ -754,9 +750,7 @@ class _StrengthRankTabState extends State<StrengthRankTab>
 
   bool _isLoading = true;
   String? _errorMessage;
-  double? _bodyWeight;
   Map<String, dynamic>? _rankData;
-  Map<String, double> _maxLifts = {};
 
   @override
   void initState() {
@@ -774,32 +768,13 @@ class _StrengthRankTabState extends State<StrengthRankTab>
       final userId = SupabaseConfig.client.auth.currentUser?.id;
       if (userId == null) throw Exception('Usuario no autenticado');
 
-      print('🏋️ Cargando datos de fuerza...');
+      print('🏋️ Obteniendo ranking de fuerza desde Supabase...');
 
-      // Obtener último peso corporal (simplificado - asumimos 75kg si no hay datos)
-      _bodyWeight = 75.0; // Valor por defecto
+      // Usar el servicio que llama al procedimiento almacenado
+      _rankData = await StrengthService.getUserStrengthRank(userId);
 
-      // Obtener workout logs
-      final workoutLogs = await SupabaseConfig.client
-          .from('workout_logs')
-          .select('exercises_log')
-          .eq('user_id', userId)
-          .not('finished_at', 'is', null);
-
-      print('📊 Workouts encontrados: ${workoutLogs.length}');
-
-      // Extraer máximos de cada ejercicio
-      _maxLifts = await StrengthStandards.extractMaxLiftsFromLogs(workoutLogs);
-
-      print('💪 Ejercicios con máximos: ${_maxLifts.keys.join(", ")}');
-
-      // Calcular rango
-      _rankData = StrengthStandards.calculateUserRank(
-        bodyWeight: _bodyWeight!,
-        maxLifts: _maxLifts,
-      );
-
-      print('🎯 Rango calculado: ${_rankData!['overall_rank']}');
+      print('🎯 Datos obtenidos: ${_rankData!['overall_rank']}');
+      print('💪 Ejercicios válidos: ${_rankData!['valid_lifts']}');
 
       setState(() {
         _isLoading = false;
@@ -807,7 +782,7 @@ class _StrengthRankTabState extends State<StrengthRankTab>
     } catch (e) {
       print('❌ Error: $e');
       setState(() {
-        _errorMessage = 'Error al cargar datos: ${e.toString()}';
+        _errorMessage = 'Error al cargar datos de fuerza';
         _isLoading = false;
       });
     }
@@ -869,6 +844,8 @@ class _StrengthRankTabState extends State<StrengthRankTab>
                       const SizedBox(height: 30),
                       _buildBodyWeightCard(),
                       const SizedBox(height: 30),
+                      _buildTipsCard(),
+                      const SizedBox(height: 30),
                       Text(
                         'ANÁLISIS POR EJERCICIO',
                         style: GoogleFonts.bebasNeue(
@@ -887,9 +864,10 @@ class _StrengthRankTabState extends State<StrengthRankTab>
   Widget _buildOverallRankCard() {
     final rank = _rankData!['overall_rank'];
     final score = _rankData!['strength_score'];
-    final emoji = StrengthStandards.getRankEmoji(rank);
-    final description = StrengthStandards.getRankDescription(rank);
-    final color = StrengthStandards.rankColors[rank] ?? Colors.grey;
+    final validLifts = _rankData!['valid_lifts'];
+    final emoji = StrengthService.getRankEmoji(rank);
+    final description = StrengthService.getRankDescription(rank);
+    final color = StrengthService.getRankColor(rank);
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -953,24 +931,51 @@ class _StrengthRankTabState extends State<StrengthRankTab>
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.black,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: color.withOpacity(0.5),
-                width: 1,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: color.withOpacity(0.5),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  'Puntuación: ${score.toStringAsFixed(2)}/3.00',
+                  style: GoogleFonts.montserrat(
+                    color: color,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-            ),
-            child: Text(
-              'Puntuación: ${score.toStringAsFixed(2)}/3.00',
-              style: GoogleFonts.montserrat(
-                color: color,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
+              const SizedBox(width: 12),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.orangeAccent.withOpacity(0.5),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  'Ejercicios: $validLifts',
+                  style: GoogleFonts.montserrat(
+                    color: Colors.orangeAccent,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -978,6 +983,8 @@ class _StrengthRankTabState extends State<StrengthRankTab>
   }
 
   Widget _buildBodyWeightCard() {
+    final bodyWeight = _rankData!['body_weight'];
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1021,7 +1028,7 @@ class _StrengthRankTabState extends State<StrengthRankTab>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${_bodyWeight!.toStringAsFixed(1)} kg',
+                  '${bodyWeight.toStringAsFixed(1)} kg',
                   style: GoogleFonts.montserrat(
                     color: Colors.orangeAccent,
                     fontSize: 28,
@@ -1039,6 +1046,69 @@ class _StrengthRankTabState extends State<StrengthRankTab>
             ),
             textAlign: TextAlign.right,
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTipsCard() {
+    final rank = _rankData!['overall_rank'];
+    final tips = StrengthService.getImprovementTips(rank);
+    final color = StrengthService.getRankColor(rank);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.lightbulb, color: color, size: 24),
+              const SizedBox(width: 12),
+              Text(
+                'CONSEJOS PARA MEJORAR',
+                style: GoogleFonts.bebasNeue(
+                  color: color,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...tips.map((tip) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      margin: const EdgeInsets.only(top: 6, right: 12),
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        tip,
+                        style: GoogleFonts.montserrat(
+                          color: Colors.white,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
         ],
       ),
     );
@@ -1091,9 +1161,10 @@ class _StrengthRankTabState extends State<StrengthRankTab>
 
   Widget _buildExerciseCard(String exercise, Map<String, dynamic> analysis) {
     final rank = analysis['rank'];
-    final color = StrengthStandards.rankColors[rank] ?? Colors.grey;
+    final color = StrengthService.getRankColor(rank);
     final weight = analysis['weight'];
     final ratio = analysis['ratio'];
+    final score = analysis['score'];
     final nextTarget = analysis['next_target'];
 
     return Container(
@@ -1127,7 +1198,7 @@ class _StrengthRankTabState extends State<StrengthRankTab>
                   border: Border.all(color: color, width: 2),
                 ),
                 child: Text(
-                  StrengthStandards.getRankEmoji(rank),
+                  StrengthService.getRankEmoji(rank),
                   style: const TextStyle(fontSize: 24),
                 ),
               ),
@@ -1169,26 +1240,39 @@ class _StrengthRankTabState extends State<StrengthRankTab>
               ),
               _buildStatColumn(
                 'Ratio',
-                StrengthStandards.formatRatio(ratio),
+                StrengthService.formatRatio(ratio),
                 color,
               ),
               _buildStatColumn(
                 'Puntuación',
-                '${analysis['score'].toStringAsFixed(1)}/3.0',
+                '${score.toStringAsFixed(1)}/3.0',
                 Colors.orangeAccent,
               ),
             ],
           ),
-          const SizedBox(height: 20),
           if (nextTarget != null) ...[
+            const SizedBox(height: 20),
             const Divider(color: Colors.orangeAccent, height: 30),
-            Text(
-              'Siguiente objetivo: ${nextTarget['rank']}',
-              style: GoogleFonts.montserrat(
-                color: Colors.orangeAccent.withOpacity(0.8),
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Siguiente: ${nextTarget['rank']}',
+                  style: GoogleFonts.montserrat(
+                    color: Colors.orangeAccent.withOpacity(0.8),
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  StrengthService.estimateTimeToNextRank(
+                      nextTarget['progress']),
+                  style: GoogleFonts.montserrat(
+                    color: color.withOpacity(0.7),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             ClipRRect(
@@ -1212,7 +1296,7 @@ class _StrengthRankTabState extends State<StrengthRankTab>
                   ),
                 ),
                 Text(
-                  'Meta: ${(nextTarget['target_ratio'] * _bodyWeight!).toStringAsFixed(1)} kg',
+                  'Meta: ${nextTarget['target_weight'].toStringAsFixed(1)} kg',
                   style: GoogleFonts.montserrat(
                     color: color,
                     fontSize: 11,
