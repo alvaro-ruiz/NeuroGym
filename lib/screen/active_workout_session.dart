@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -41,7 +43,7 @@ class _ActiveTrainingSessionState extends State<ActiveTrainingSession> {
   // Control de ejercicios y sets
   int _currentExerciseIndex = 0;
   int _currentSetNumber = 1;
-  List<Map<String, dynamic>> _workoutLog = [];
+  final List<Map<String, dynamic>> _workoutLog = [];
 
   // Datos del set actual
   final TextEditingController _weightController = TextEditingController();
@@ -401,18 +403,16 @@ class _ActiveTrainingSessionState extends State<ActiveTrainingSession> {
     );
   }
 
-  // ══════════════════════════════════════════════════════════════════════
   // UI
-  // ══════════════════════════════════════════════════════════════════════
 
   @override
   Widget build(BuildContext context) {
     final currentExercise = _getCurrentExercise();
 
     if (currentExercise == null || _isLoading) {
-      return Scaffold(
+      return const Scaffold(
         backgroundColor: Colors.black,
-        body: const Center(
+        body: Center(
           child: CircularProgressIndicator(color: Colors.orangeAccent),
         ),
       );

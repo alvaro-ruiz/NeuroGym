@@ -280,9 +280,7 @@ class _RoutineDetailPageState extends State<RoutineDetailPage> {
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // PANTALLA DE EJERCICIOS DEL DÍA - CON BOTONES PARA BORRAR Y MOVER
-// ══════════════════════════════════════════════════════════════════════════════
 
 class DayExercisesPage extends StatefulWidget {
   final String dayId;
@@ -357,7 +355,7 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
     }
   }
 
-  // 🗑️ NUEVA FUNCIÓN: Borrar ejercicio
+  // Borrar ejercicio
   Future<void> _deleteExercise(String exerciseId, String exerciseName) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -430,42 +428,6 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
       }
     } catch (e) {
       print('❌ Error al eliminar ejercicio: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  // ↕️ NUEVA FUNCIÓN: Mover ejercicio
-  Future<void> _moveExercise(int currentIndex, bool moveUp) async {
-    if (moveUp && currentIndex == 0) return;
-    if (!moveUp && currentIndex == _exercises.length - 1) return;
-
-    final targetIndex = moveUp ? currentIndex - 1 : currentIndex + 1;
-
-    try {
-      print('↕️ Moviendo ejercicio de $currentIndex a $targetIndex');
-
-      final currentExercise = _exercises[currentIndex];
-      final targetExercise = _exercises[targetIndex];
-
-      // Intercambiar los exercise_order
-      await SupabaseConfig.client.from('routine_exercises').update(
-          {'exercise_order': targetIndex + 1}).eq('id', currentExercise['id']);
-
-      await SupabaseConfig.client.from('routine_exercises').update(
-          {'exercise_order': currentIndex + 1}).eq('id', targetExercise['id']);
-
-      print('✅ Ejercicios reordenados');
-
-      _loadExercises();
-    } catch (e) {
-      print('❌ Error al mover ejercicio: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -730,38 +692,6 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
                       ),
                   ],
                 ),
-              ),
-              // 🆕 BOTONES DE MOVER
-              Column(
-                children: [
-                  IconButton(
-                    onPressed:
-                        index > 0 ? () => _moveExercise(index, true) : null,
-                    icon: Icon(
-                      Icons.arrow_upward,
-                      color: index > 0
-                          ? Colors.orangeAccent
-                          : Colors.orangeAccent.withOpacity(0.3),
-                      size: 20,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  IconButton(
-                    onPressed: index < _exercises.length - 1
-                        ? () => _moveExercise(index, false)
-                        : null,
-                    icon: Icon(
-                      Icons.arrow_downward,
-                      color: index < _exercises.length - 1
-                          ? Colors.orangeAccent
-                          : Colors.orangeAccent.withOpacity(0.3),
-                      size: 20,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
               ),
               // 🆕 BOTÓN DE BORRAR
               IconButton(

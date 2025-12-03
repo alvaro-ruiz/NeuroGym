@@ -389,6 +389,11 @@ CREATE TABLE IF NOT EXISTS public.weight_logs (
 CREATE INDEX IF NOT EXISTS idx_weight_logs_user_created 
 ON public.weight_logs(user_id, created_at DESC);
 
+
+CREATE POLICY "Los usuarios pueden eliminar sus propias rutinas"
+ON routines FOR DELETE
+USING (auth.uid() = owner_user_id);
+
 -- Obtener ranking de ejercicios individuales
 -- SELECT * FROM calculate_strength_rank('user-uuid-here');
 
