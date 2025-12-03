@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:neuro_gym/bd/supabase_config.dart';
-import 'package:neuro_gym/screen/ia.dart';
 import 'package:neuro_gym/screen/routine_detail.dart';
 import 'package:neuro_gym/screen/creation_rutine.dart';
 import 'package:neuro_gym/screen/user_search.dart';
