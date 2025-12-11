@@ -39,8 +39,6 @@ class _UserSearchPageState extends State<UserSearchPage> {
       final currentUserId = SupabaseConfig.client.auth.currentUser?.id;
       if (currentUserId == null) throw Exception('Usuario no autenticado');
 
-      print('🔍 Cargando usuarios...');
-
       // Cargar todos los usuarios excepto el actual
       final usersData = await SupabaseConfig.client
           .from('users_profiles')
@@ -67,7 +65,6 @@ class _UserSearchPageState extends State<UserSearchPage> {
         _isLoading = false;
       });
 
-      print('✅ ${_users.length} usuarios cargados');
     } catch (e) {
       print('❌ Error al cargar usuarios: $e');
       setState(() {
@@ -113,7 +110,6 @@ class _UserSearchPageState extends State<UserSearchPage> {
         'ranking_points': points,
       };
     } catch (e) {
-      print('Error calculando stats para $userId: $e');
       return {
         'total_workouts': 0,
         'total_volume': 0.0,

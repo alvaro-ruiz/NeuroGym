@@ -5,6 +5,7 @@ import 'package:neuro_gym/screen/routine_detail.dart';
 import 'package:neuro_gym/screen/creation_rutine.dart';
 import 'package:neuro_gym/screen/user_search.dart';
 import 'package:neuro_gym/screen/workout_history.dart';
+import 'package:neuro_gym/screen/settings.dart';
 
 class NeuroGymRoutinesPage extends StatefulWidget {
   const NeuroGymRoutinesPage({super.key});
@@ -37,15 +38,11 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
         throw Exception('Usuario no autenticado');
       }
 
-      print('🔍 Cargando rutinas para usuario: $userId');
-
       final response = await SupabaseConfig.client
           .from('routines')
           .select('id, title, description, created_at')
           .eq('owner_user_id', userId)
           .order('created_at', ascending: false);
-
-      print('✅ Rutinas cargadas: ${response.length}');
 
       setState(() {
         _routines = List<Map<String, dynamic>>.from(response);
@@ -121,26 +118,19 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
     if (confirm != true) return;
 
     try {
-      print('🗑️ Iniciando eliminación de rutina: $routineId');
 
-      // PASO 1: Eliminar workout_logs (PRIMERO, porque referencia a routine_id)
-      print('1️⃣ Eliminando workout_logs...');
+      // Eliminar workout_logs (PRIMERO, porque referencia a routine_id)
       await SupabaseConfig.client
           .from('workout_logs')
           .delete()
           .eq('routine_id', routineId);
-      print('✅ Workout logs eliminados');
-
-      // PASO 2: Obtener todos los días de la rutina
-      print('2️⃣ Obteniendo días de la rutina...');
+      //  Obtener todos los días de la rutina
       final days = await SupabaseConfig.client
           .from('routine_days')
           .select('id')
           .eq('routine_id', routineId);
-      print('✅ Días encontrados: ${days.length}');
 
-      // PASO 3: Para cada día, eliminar sus ejercicios
-      print('3️⃣ Eliminando ejercicios de cada día...');
+      // Para cada día, eliminar sus ejercicios
       for (var day in days) {
         final dayId = day['id'];
 
@@ -148,27 +138,21 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
             .from('routine_exercises')
             .delete()
             .eq('routine_day_id', dayId);
-
-        print('   ✓ Ejercicios del día $dayId eliminados');
       }
 
-      // PASO 4: Eliminar todos los días
-      print('4️⃣ Eliminando días de la rutina...');
+      // Eliminar todos los días
       await SupabaseConfig.client
           .from('routine_days')
           .delete()
           .eq('routine_id', routineId);
-      print('✅ Días eliminados');
 
-      // PASO 5: Finalmente, eliminar la rutina
-      print('5️⃣ Eliminando rutina de la tabla routines...');
+      // Finalmente, eliminar la rutina
+      // ignore: unused_local_variable
       final deleteResult = await SupabaseConfig.client
           .from('routines')
           .delete()
           .eq('id', routineId)
           .select(); // Añadir .select() para obtener confirmación
-
-      print('✅ Rutina eliminada. Resultado: $deleteResult');
 
       // VERIFICACIÓN: Comprobar que ya no existe
       final verification = await SupabaseConfig.client
@@ -493,21 +477,16 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
                       _loadRoutines();
                     }
                   }
-
-                  if (index == 3) {
-                    // Botón de la pesa - Crear rutina
-                    final result = await Navigator.push(
+                  if (index == 4) {
+                    Navigator.push(
                       // ignore: use_build_context_synchronously
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const CreateRoutinePage(),
+                        builder: (context) => const SettingsPage(),
                       ),
                     );
-                    if (result == true) {
-                      _loadRoutines();
-                    }
+                    return;
                   }
-                  // Aquí puedes agregar navegación para los otros botones
                 },
                 items: const [
                   BottomNavigationBarItem(
@@ -542,7 +521,6 @@ class _NeuroGymRoutinesPageState extends State<NeuroGymRoutinesPage> {
   Widget _buildRoutineCard(String title, String description, String routineId) {
     return GestureDetector(
       onTap: () {
-        print('📋 Rutina seleccionada: $routineId');
         Navigator.push(
           context,
           MaterialPageRoute(

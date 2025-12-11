@@ -41,15 +41,11 @@ class _WeightTrackerPageState extends State<WeightTrackerPage> {
         throw Exception('Usuario no autenticado');
       }
 
-      print('🔍 Cargando historial de peso...');
-
       final response = await SupabaseConfig.client
           .from('weight_logs')
           .select('id, weight_kg, notes, created_at')
           .eq('user_id', userId)
           .order('created_at', ascending: false);
-
-      print('✅ Registros cargados: ${response.length}');
 
       setState(() {
         _weightHistory = List<Map<String, dynamic>>.from(response);
@@ -84,16 +80,11 @@ class _WeightTrackerPageState extends State<WeightTrackerPage> {
         throw Exception('Usuario no autenticado');
       }
 
-      print('💾 Guardando peso: $weight kg');
-
       await SupabaseConfig.client.from('weight_logs').insert({
         'user_id': userId,
         'weight_kg': weight,
         'created_at': DateTime.now().toIso8601String(),
       });
-
-      print('✅ Peso guardado exitosamente');
-
       _weightController.clear();
 
       if (mounted) {

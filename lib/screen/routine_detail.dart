@@ -36,15 +36,11 @@ class _RoutineDetailPageState extends State<RoutineDetailPage> {
     });
 
     try {
-      print('🔍 Cargando días de rutina: ${widget.routineId}');
-
       final daysResponse = await SupabaseConfig.client
           .from('routine_days')
           .select('id, day_order, title, notes, duration_minutes')
           .eq('routine_id', widget.routineId)
           .order('day_order', ascending: true);
-
-      print('✅ Días cargados: ${daysResponse.length}');
 
       setState(() {
         _routineDays = List<Map<String, dynamic>>.from(daysResponse);
@@ -176,7 +172,6 @@ class _RoutineDetailPageState extends State<RoutineDetailPage> {
   Widget _buildDayCard(Map<String, dynamic> day) {
     return GestureDetector(
       onTap: () async {
-        print('📅 Día seleccionado: ${day['id']}');
         final result = await Navigator.push(
           context,
           MaterialPageRoute(
@@ -316,8 +311,6 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
     });
 
     try {
-      print('🔍 Cargando ejercicios del día: ${widget.dayId}');
-
       final exercisesResponse = await SupabaseConfig.client
           .from('routine_exercises')
           .select('''
@@ -339,8 +332,6 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
           ''')
           .eq('routine_day_id', widget.dayId)
           .order('exercise_order', ascending: true);
-
-      print('✅ Ejercicios cargados: ${exercisesResponse.length}');
 
       setState(() {
         _exercises = List<Map<String, dynamic>>.from(exercisesResponse);
@@ -407,14 +398,10 @@ class _DayExercisesPageState extends State<DayExercisesPage> {
     if (confirm != true) return;
 
     try {
-      print('🗑️ Eliminando ejercicio: $exerciseId');
-
       await SupabaseConfig.client
           .from('routine_exercises')
           .delete()
           .eq('id', exerciseId);
-
-      print('✅ Ejercicio eliminado exitosamente');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -26,10 +26,6 @@ class ActiveTrainingSession extends StatefulWidget {
 }
 
 class _ActiveTrainingSessionState extends State<ActiveTrainingSession> {
-  // ══════════════════════════════════════════════════════════════════════
-  // VARIABLES DE ESTADO
-  // ══════════════════════════════════════════════════════════════════════
-
   // Cronómetro de sesión total
   late DateTime _sessionStartTime;
   Timer? _sessionTimer;
@@ -69,10 +65,7 @@ class _ActiveTrainingSessionState extends State<ActiveTrainingSession> {
     super.dispose();
   }
 
-  // ══════════════════════════════════════════════════════════════════════
-  // INICIALIZACIÓN
-  // ══════════════════════════════════════════════════════════════════════
-
+  // INICIALIZACIÓN DE LA SESIÓN
   Future<void> _initializeSession() async {
     setState(() {
       _sessionStartTime = DateTime.now();
@@ -114,8 +107,6 @@ class _ActiveTrainingSessionState extends State<ActiveTrainingSession> {
       setState(() {
         _workoutLogId = response['id'];
       });
-
-      print('✅ Workout log creado: $_workoutLogId');
     } catch (e) {
       print('❌ Error al crear workout log: $e');
     }
@@ -130,10 +121,7 @@ class _ActiveTrainingSessionState extends State<ActiveTrainingSession> {
     }
   }
 
-  // ══════════════════════════════════════════════════════════════════════
   // GESTIÓN DE CRONÓMETROS
-  // ══════════════════════════════════════════════════════════════════════
-
   void _startRestTimer() {
     final currentExercise = _getCurrentExercise();
     final restSeconds = currentExercise?['rest_seconds'] ?? 60;
@@ -175,10 +163,7 @@ class _ActiveTrainingSessionState extends State<ActiveTrainingSession> {
     return '$hours:$minutes:$seconds';
   }
 
-  // ══════════════════════════════════════════════════════════════════════
   // GESTIÓN DE SETS Y EJERCICIOS
-  // ══════════════════════════════════════════════════════════════════════
-
   Map<String, dynamic>? _getCurrentExercise() {
     if (_currentExerciseIndex < widget.exercises.length) {
       return widget.exercises[_currentExerciseIndex];
@@ -287,17 +272,12 @@ class _ActiveTrainingSessionState extends State<ActiveTrainingSession> {
       await SupabaseConfig.client.from('workout_logs').update({
         'exercises_log': jsonEncode(_workoutLog),
       }).eq('id', _workoutLogId!);
-
-      print('✅ Progreso guardado');
     } catch (e) {
       print('❌ Error al guardar progreso: $e');
     }
   }
 
-  // ══════════════════════════════════════════════════════════════════════
   // FINALIZACIÓN DEL ENTRENAMIENTO
-  // ══════════════════════════════════════════════════════════════════════
-
   Future<void> _finishWorkout() async {
     setState(() {
       _isLoading = true;
@@ -310,8 +290,6 @@ class _ActiveTrainingSessionState extends State<ActiveTrainingSession> {
         'finished_at': finishTime.toIso8601String(),
         'exercises_log': jsonEncode(_workoutLog),
       }).eq('id', _workoutLogId!);
-
-      print('✅ Entrenamiento finalizado');
 
       if (mounted) {
         _showCompletionDialog();
@@ -699,7 +677,7 @@ class _ActiveTrainingSessionState extends State<ActiveTrainingSession> {
           onTap: () {
             controller.clear();
 
-            /// 👈 SE BORRA AUTOMÁTICAMENTE AL HACER CLICK
+            /// SE BORRA AUTOMÁTICAMENTE AL HACER CLICK
           },
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           style: const TextStyle(color: Colors.orangeAccent, fontSize: 24),

@@ -13,7 +13,7 @@ class CreateRoutinePage extends StatefulWidget {
 class _CreateRoutinePageState extends State<CreateRoutinePage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  bool _isPublic = false;
+  final bool _isPublic = false;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -88,8 +88,6 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
         throw Exception('Usuario no autenticado');
       }
 
-      print('📝 Creando rutina: $title');
-
       final routineResponse = await SupabaseConfig.client
           .from('routines')
           .insert({
@@ -100,8 +98,6 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
           })
           .select()
           .single();
-
-      print('✅ Rutina creada: ${routineResponse['id']}');
 
       for (var i = 0; i < _days.length; i++) {
         final day = _days[i];
@@ -116,8 +112,6 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
           'notes': dayNotes.isEmpty ? null : dayNotes,
           'duration_minutes': duration,
         });
-
-        print('✅ Día ${i + 1} creado: $dayTitle');
       }
 
       if (mounted) {
@@ -144,7 +138,6 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
     }
   }
 
-  // 🆕 NUEVA FUNCIÓN: Abrir diálogo de IA
   Future<void> _openAIGenerator() async {
     final result = await showModalBottomSheet<bool>(
       context: context,
@@ -184,7 +177,7 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
           ),
         ),
         centerTitle: true,
-        // 🆕 BOTÓN DE IA EN APPBAR
+        // BOTÓN DE IA EN APPBAR
         actions: [
           IconButton(
             onPressed: _openAIGenerator,
@@ -199,7 +192,7 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
       ),
       body: Column(
         children: [
-          // 🆕 BANNER DE IA
+          // BANNER DE IA
           GestureDetector(
             onTap: _openAIGenerator,
             child: Container(
@@ -313,53 +306,6 @@ class _CreateRoutinePageState extends State<CreateRoutinePage> {
                     maxLines: 3,
                   ),
                   const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[900],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.orangeAccent.withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'RUTINA PÚBLICA',
-                              style: GoogleFonts.montserrat(
-                                color: Colors.orangeAccent,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Otros usuarios podrán verla',
-                              style: GoogleFonts.montserrat(
-                                color: Colors.orangeAccent.withOpacity(0.5),
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Switch(
-                          value: _isPublic,
-                          onChanged: (value) {
-                            setState(() {
-                              _isPublic = value;
-                            });
-                          },
-                          activeColor: Colors.orangeAccent,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 30),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [

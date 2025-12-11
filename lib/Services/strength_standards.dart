@@ -16,7 +16,7 @@ class StrengthService {
     try {
       print('🏋️ Calculando ranking de fuerza para usuario: $userId');
 
-      // 1. Obtener ranking general
+      // Obtener ranking general
       final overallResult = await SupabaseConfig.client
           .rpc('get_overall_strength_rank', params: {'p_user_id': userId});
 
@@ -33,7 +33,7 @@ class StrengthService {
 
       final overall = overallResult[0];
 
-      // 2. Obtener análisis por ejercicio
+      // Obtener análisis por ejercicio
       final liftsResult = await SupabaseConfig.client.rpc(
         'calculate_strength_rank',
         params: {
@@ -91,8 +91,7 @@ class StrengthService {
       if (result == null) return null;
 
       for (var lift in result) {
-        if (lift['exercise_name'].toLowerCase() ==
-            exerciseName.toLowerCase()) {
+        if (lift['exercise_name'].toLowerCase() == exerciseName.toLowerCase()) {
           return {
             'exercise': lift['exercise_name'],
             'weight': lift['max_weight'],

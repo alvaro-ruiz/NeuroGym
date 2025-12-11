@@ -68,23 +68,21 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
     });
 
     try {
-      // 1. Verificar conexión a internet
+      // Verificar conexión a internet
       final hasInternet = await _checkInternetConnection();
       if (!hasInternet) {
         throw Exception('No hay conexión a internet.\n'
             'Por favor verifica tu conexión WiFi o datos móviles.');
       }
 
-      // 2. Verificar conexión con Groq
+      // Verificar conexión con Groq
       final hasGroq = await _checkIAConnection();
       if (!hasGroq) {
         throw Exception('No se puede conectar con el servidor de IA.\n'
             'Verifica que tu API key sea válida o intenta más tarde.');
       }
 
-      print('🤖 Generando rutina estructurada con IA...');
-
-      // 3. Obtener rutina estructurada con ejercicios desde Groq
+      // Obtener rutina estructurada con ejercicios desde Groq
       final routineData =
           await RoutineRecommenderService.generateStructuredRoutine(
         userGoal: _goal.isEmpty ? 'rutina completa de gimnasio' : _goal,
@@ -94,17 +92,13 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
         daysPerWeek: _daysPerWeek,
       );
 
-      print('✅ Rutina estructurada recibida de IA');
-
-      // 4. Obtener el ID del usuario actual
+      // Obtener el ID del usuario actual
       final userId = SupabaseConfig.client.auth.currentUser?.id;
       if (userId == null) throw Exception('Usuario no autenticado');
 
-      // 5. Crear nueva rutina con la descripción de IA
+      // Crear nueva rutina con la descripción de IA
       final newRoutineTitle =
           _routineName.isEmpty ? 'Rutina Personalizada con IA' : _routineName;
-
-      print('💾 Creando nueva rutina: $newRoutineTitle');
 
       final newRoutine = await SupabaseConfig.client
           .from('routines')
@@ -118,11 +112,8 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
           .select()
           .single();
 
-      print('✅ Rutina creada: ${newRoutine['id']}');
-      // 6. 🆕 Crear días Y ejercicios desde el JSON de IA
+      // Crear días Y ejercicios desde el JSON de IA
       final days = routineData['days'] as List<dynamic>;
-      print('📅 Creando ${days.length} días con ejercicios...');
-
       int totalExercises = 0;
 
       for (var dayData in days) {
@@ -138,13 +129,8 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
             })
             .select()
             .single();
-
-        print('✅ Día creado: ${dayData['title']}');
-
-        // 7. 🆕 Insertar ejercicios del día
+        // Insertar ejercicios del día
         final exercises = dayData['exercises'] as List<dynamic>;
-        print('  💪 Insertando ${exercises.length} ejercicios...');
-
         for (var i = 0; i < exercises.length; i++) {
           final exerciseData = exercises[i];
           final exerciseName = exerciseData['name'];
@@ -160,7 +146,6 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
 
           if (existingExercise != null) {
             exerciseId = existingExercise['id'];
-            print('    ✓ Ejercicio existente: $exerciseName');
           } else {
             // Crear nuevo ejercicio
             final newExercise = await SupabaseConfig.client
@@ -174,7 +159,6 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
                 .single();
 
             exerciseId = newExercise['id'];
-            print('    + Nuevo ejercicio creado: $exerciseName');
           }
 
           // Insertar el ejercicio en routine_exercises
@@ -193,10 +177,6 @@ class _AIRoutineGeneratorDialogState extends State<AIRoutineGeneratorDialog> {
           totalExercises++;
         }
       }
-
-      print('🎉 Rutina completada:');
-      print('  - Días creados: ${days.length}');
-      print('  - Ejercicios totales: $totalExercises');
 
       if (mounted) {
         // ✅ CORRECCIÓN: Cerrar TODOS los diálogos antes de navegar

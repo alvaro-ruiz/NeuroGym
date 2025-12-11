@@ -70,13 +70,6 @@ class _NeuroGymRegisterPageState extends State<NeuroGymRegisterPage> {
         emailRedirectTo: null, // No redirigir al confirmar email
       );
 
-      // 📋 Imprime los datos traídos de la BD en consola
-      print('✅ Registro exitoso');
-      print('Usuario ID: ${response.user?.id}');
-      print('Email: ${response.user?.email}');
-      print('Nombre: ${response.user?.userMetadata?['full_name']}');
-      print('Respuesta completa: $response');
-
       // Guardar datos adicionales en la tabla 'users_profiles'
       if (response.user != null) {
         try {
@@ -85,7 +78,6 @@ class _NeuroGymRegisterPageState extends State<NeuroGymRegisterPage> {
             'display_name': name,
             'created_at': DateTime.now().toIso8601String(),
           });
-          print('✅ Perfil de usuario creado en users_profiles');
         } catch (e) {
           print('⚠️ No se pudo crear perfil: $e');
           // Continúa sin error, el usuario ya está creado en Authentication

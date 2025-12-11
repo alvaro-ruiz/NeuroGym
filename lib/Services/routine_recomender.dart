@@ -11,7 +11,7 @@ class RoutineRecommenderService {
   static const String _groqUrl =
       "https://api.groq.com/openai/v1/chat/completions";
 
-  /// 🆕 Generar rutina estructurada con ejercicios en formato JSON
+  /// Generar rutina estructurada con ejercicios en formato JSON
   static Future<Map<String, dynamic>> generateStructuredRoutine({
     required String userGoal,
     required int experienceLevel,
@@ -19,8 +19,6 @@ class RoutineRecommenderService {
     required int daysPerWeek,
   }) async {
     try {
-      print("🤖 Solicitando rutina estructurada a Groq...");
-
       final level = experienceLevel == 1
           ? 'principiante'
           : experienceLevel == 2
@@ -75,14 +73,9 @@ class RoutineRecommenderService {
         }),
       );
 
-      print("📥 Status: ${response.statusCode}");
-
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
         String text = json["choices"][0]["message"]["content"];
-
-        print("📄 Respuesta raw de Groq:");
-        print(text);
 
         // Limpiar el texto para extraer solo el JSON
         text = text.trim();
@@ -100,14 +93,8 @@ class RoutineRecommenderService {
 
         text = text.trim();
 
-        print("🔍 JSON limpio:");
-        print(text);
-
         // Parsear el JSON
         final routineData = jsonDecode(text);
-
-        print("✅ JSON parseado exitosamente");
-        print("📊 Días en la rutina: ${routineData['days']?.length ?? 0}");
 
         return routineData;
       } else {
@@ -128,7 +115,6 @@ class RoutineRecommenderService {
     required int daysPerWeek,
   }) async {
     try {
-      print("🤖 Solicitando plan personalizado a Groq...");
 
       final level = experienceLevel == 1
           ? 'principiante'
@@ -160,12 +146,9 @@ class RoutineRecommenderService {
         }),
       );
 
-      print("📥 Status: ${response.statusCode}");
-
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
         final text = json["choices"][0]["message"]["content"];
-        print("🟢 Respuesta generada por Groq:\n$text");
         return text;
       } else {
         print("❌ Error desde Groq: ${response.body}");
@@ -180,7 +163,6 @@ class RoutineRecommenderService {
   /// Test de conexión
   static Future<bool> testConnection() async {
     try {
-      print('🧪 Probando conexión con Groq...');
       final response = await http.post(
         Uri.parse(_groqUrl),
         headers: {
@@ -194,9 +176,6 @@ class RoutineRecommenderService {
           ]
         }),
       );
-
-      print("📡 Código: ${response.statusCode}");
-
       return response.statusCode == 200;
     } catch (e) {
       print("❌ Error al conectar: $e");
@@ -215,8 +194,6 @@ class RoutineRecommenderService {
     final results = <Map<String, dynamic>>[];
 
     try {
-      print("📌 Obteniendo recomendaciones basadas en similitud...");
-
       final semanticResults = await _getRoutinesWithEmbeddings();
 
       if (semanticResults.isEmpty) {

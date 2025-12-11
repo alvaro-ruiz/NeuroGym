@@ -732,10 +732,7 @@ class _WorkoutHistoryTabState extends State<WorkoutHistoryTab>
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// TAB 2: RANGO DE FUERZA - ACTUALIZADO PARA USAR StrengthService
-// ═══════════════════════════════════════════════════════════════════════════
-
+// RANGO DE FUERZA - ACTUALIZADO PARA USAR StrengthService
 class StrengthRankTab extends StatefulWidget {
   const StrengthRankTab({super.key});
 
@@ -768,13 +765,8 @@ class _StrengthRankTabState extends State<StrengthRankTab>
       final userId = SupabaseConfig.client.auth.currentUser?.id;
       if (userId == null) throw Exception('Usuario no autenticado');
 
-      print('🏋️ Obteniendo ranking de fuerza desde Supabase...');
-
       // Usar el servicio que llama al procedimiento almacenado
       _rankData = await StrengthService.getUserStrengthRank(userId);
-
-      print('🎯 Datos obtenidos: ${_rankData!['overall_rank']}');
-      print('💪 Ejercicios válidos: ${_rankData!['valid_lifts']}');
 
       setState(() {
         _isLoading = false;

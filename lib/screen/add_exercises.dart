@@ -37,16 +37,11 @@ class _AddExercisesToDayPageState extends State<AddExercisesToDayPage> {
     });
 
     try {
-      print('🔍 Cargando ejercicios disponibles...');
-
       final response = await SupabaseConfig.client
           .from('exercises')
           .select(
               'id, name, description, primary_muscle, equipment, difficulty')
           .order('name', ascending: true);
-
-      print('✅ Ejercicios cargados: ${response.length}');
-
       setState(() {
         _availableExercises = List<Map<String, dynamic>>.from(response);
         _isLoading = false;
@@ -106,8 +101,6 @@ class _AddExercisesToDayPageState extends State<AddExercisesToDayPage> {
     });
 
     try {
-      print('💾 Guardando ${_selectedExercises.length} ejercicios...');
-
       for (var i = 0; i < _selectedExercises.length; i++) {
         final exercise = _selectedExercises[i];
 
@@ -124,8 +117,6 @@ class _AddExercisesToDayPageState extends State<AddExercisesToDayPage> {
           'notes':
               exercise['notes']?.isEmpty == true ? null : exercise['notes'],
         });
-
-        print('✅ Ejercicio ${i + 1} guardado: ${exercise['exercise_name']}');
       }
 
       if (mounted) {
